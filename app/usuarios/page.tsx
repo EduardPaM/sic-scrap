@@ -58,7 +58,7 @@ function Perfiles() {
       setMessage(
         error
           ? error.message
-          : "Perfil guardado. La persona puede activar su cuenta y confirmar su correo.",
+          : "Perfil guardado. No se envió un correo: comparte el enlace de activación para que la persona cree su contraseña y solicite la confirmación.",
       );
       if (!error) await load();
     } catch {
@@ -73,6 +73,25 @@ function Perfiles() {
       <p className="subtitle">
         Asigna el acceso antes de que cada integrante active su cuenta.
       </p>
+      <section className="surface">
+        <h2>Cómo activar a un integrante</h2>
+        <ol>
+          <li>Guarda su correo y sus permisos en este formulario.</li>
+          <li>Comparte el enlace de activación. Cada persona crea su propia contraseña.</li>
+          <li>La persona solicita la confirmación, revisa su correo y después inicia sesión.</li>
+        </ol>
+        <p>Guardar un perfil no envía una invitación por correo.</p>
+        <p><a href="/activar-cuenta">Abrir página de activación</a></p>
+        <button type="button" onClick={async () => {
+          const url = window.location.origin + "/activar-cuenta";
+          try {
+            await navigator.clipboard.writeText(url);
+            setMessage("Enlace de activación copiado. Compártelo con la persona autorizada.");
+          } catch {
+            setMessage("Copia este enlace de activación: " + url);
+          }
+        }}>Copiar enlace de activación</button>
+      </section>
       <form className="surface form-grid" onSubmit={submit}>
         <label>
           Nombre
@@ -161,7 +180,7 @@ function Perfiles() {
                     ? "Inactivo"
                     : r.auth_user_id
                       ? "Vinculado"
-                      : "Por activar"}
+                      : "Sin vincular"}
                 </td>
               </tr>
             ))}
@@ -169,7 +188,7 @@ function Perfiles() {
         </table>
         <p className="hint">
           Para actualizar un perfil usa su mismo correo. Cada persona establece
-          su contraseña en /activar-cuenta.
+          su contraseña en la página de activación. Sin vincular significa que todavía no ha iniciado sesión con un correo confirmado; no indica que se haya enviado una invitación.
         </p>
       </section>
     </main>
