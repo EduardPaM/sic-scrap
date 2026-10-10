@@ -28,10 +28,12 @@ function Perfiles() {
   const [activo, setActivo] = useState(true);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [retirar, setRetirar] = useState<Perfil | null>(null);
   async function load() {
     const { data, error } = await supabase
       .from("usuario")
       .select("nombre,correo,rol,activo,auth_user_id")
+      .is("invitacion_retirada_en", null)
       .order("nombre");
     if (error) setMessage(error.message);
     else setRows(data ?? []);
@@ -66,6 +68,18 @@ function Perfiles() {
     } finally {
       setBusy(false);
     }
+  }
+  async function eliminarInvitacion() {
+    if (!retirar || busy) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc("retirar_invitacion", { p_correo: retirar.correo });
+      if (error) { setMessage(error.message); return; }
+      setMessage(`Invitación de ${retirar.correo} retirada. Para restaurarla, vuelve a guardar su perfil con ese correo.`);
+      setRetirar(null);
+      await load();
+    } catch { setMessage("No se confirmó la eliminación. Actualiza la lista antes de reintentar."); }
+    finally { setBusy(false); }
   }
   return (
     <main className="workspace">
@@ -159,6 +173,13 @@ function Perfiles() {
           {message}
         </p>
       )}
+      {retirar && <section className="surface" role="region" aria-label="Confirmar eliminación de invitación">
+        <h2>Eliminar invitación</h2>
+        <p>¿Retirar a <strong>{retirar.nombre} ({retirar.correo})</strong> de la lista de invitados?</p>
+        <p>Este correo perderá la autorización de acceso. Puedes restaurarlo guardando de nuevo su perfil. No se borrará una cuenta ni registros de producción.</p>
+        <button type="button" disabled={busy} onClick={() => void eliminarInvitacion()}>{busy ? "Eliminando…" : "Confirmar eliminación"}</button>{" "}
+        <button type="button" disabled={busy} onClick={() => setRetirar(null)}>Cancelar</button>
+      </section>}
       <section className="surface table-scroll">
         <table>
           <thead>
@@ -167,6 +188,7 @@ function Perfiles() {
               <th>Correo</th>
               <th>Rol</th>
               <th>Acceso</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -182,11 +204,15 @@ function Perfiles() {
                       ? "Vinculado"
                       : "Sin vincular"}
                 </td>
+                <td>{!r.auth_user_id
+                  ? <button type="button" disabled={busy} onClick={() => { setRetirar(r); setMessage(""); }} aria-label={`Eliminar invitación de ${r.correo}`}>Eliminar invitación</button>
+                  : <span className="hint">Cuenta vinculada: usa Estado Inactivo para retirar acceso.</span>}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <p className="hint">
+          Las invitaciones eliminadas pueden restaurarse guardando de nuevo su perfil. {" "}
           Para actualizar un perfil usa su mismo correo. Cada persona establece
           su contraseña en la página de activación. Sin vincular significa que todavía no ha iniciado sesión con un correo confirmado; no indica que se haya enviado una invitación.
         </p>
