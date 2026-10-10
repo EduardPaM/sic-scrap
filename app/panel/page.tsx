@@ -16,6 +16,11 @@ type KPI = {
   alerta_activa: boolean;
 };
 const fmt = (x: number) => new Intl.NumberFormat("es-MX").format(x);
+// Sin fecha elegida solo se consultan los últimos 30 días para no recorrer todo el historial cada 15 s.
+const hace30Dias = () =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(
+    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+  );
 export default function Panel() {
   return (
     <Access>
@@ -38,7 +43,7 @@ function Dashboard() {
       .from("v_scrap_turno")
       .select("*")
       .order("fecha", { ascending: false });
-    if (date) q = q.eq("fecha", date);
+    q = date ? q.eq("fecha", date) : q.gte("fecha", hace30Dias());
     const { data, error } = await q.limit(1000);
     if (current !== request.current.generation) return;
     if (error) {
@@ -117,6 +122,12 @@ function Dashboard() {
           Actualizado: {updated || "—"}
           <br />
           Actualización automática cada 15 s
+          {!date && (
+            <>
+              <br />
+              Sin fecha elegida: últimos 30 días
+            </>
+          )}
         </p>
       </div>
       {message && (

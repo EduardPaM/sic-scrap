@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { Access } from "@/components/session";
+import { Access, useSession } from "@/components/session";
 import { camposScrap as campos, camposFaltantes, cambiarCampoScrap, type CampoScrap, type FormScrap } from "@/lib/scrap-form";
 
 type Catalogo = { id: number; nombre: string };
@@ -53,7 +53,11 @@ export default function RegistrarScrapPage() {
   const [enviando, setEnviando] = useState(false);
   const [validar, setValidar] = useState(false);
   const [avisoLote, setAvisoLote] = useState("");
-  const faltantes = camposFaltantes(form);
+  const { perfil } = useSession();
+  // Un operador con turno asignado solo captura ese turno (lo exige también la base de datos).
+  const turnoFijo = perfil?.id_turno ? String(perfil.id_turno) : null;
+  const datos = turnoFijo ? { ...form, turno: turnoFijo } : form;
+  const faltantes = camposFaltantes(datos);
   function atributos(campo: CampoScrap) {
     return {
       id: `scrap-${campo}`,
@@ -149,7 +153,7 @@ export default function RegistrarScrapPage() {
       const { data, error } = await supabase.rpc("guardar_captura", {
         p_fecha: form.fecha,
         p_maquina: Number(form.maquina),
-        p_turno: Number(form.turno),
+        p_turno: Number(datos.turno),
         p_pieza: Number(form.pieza),
         p_lote: Number(form.lote),
         p_molde: Number(form.molde),
@@ -169,7 +173,7 @@ export default function RegistrarScrapPage() {
         .select("pct_scrap,alerta_activa")
         .eq("fecha", form.fecha)
         .eq("id_maquina", Number(form.maquina))
-        .eq("id_turno", Number(form.turno))
+        .eq("id_turno", Number(datos.turno))
         .maybeSingle();
       const estado = errorPanel
         ? "No se pudo consultar la alerta; actualiza el panel."
@@ -257,8 +261,9 @@ export default function RegistrarScrapPage() {
           <div className="space-y-2">
             <Label>Turno</Label>
             <Select
-              value={form.turno}
+              value={datos.turno}
               onValueChange={(v) => actualizarCampo("turno", v)}
+              disabled={!!turnoFijo}
             >
               <SelectTrigger {...atributos("turno")} aria-label="Turno">
                 <SelectValue placeholder="Seleccionar turno" />
@@ -404,7 +409,7 @@ export default function RegistrarScrapPage() {
             <p
               role="status"
               className={
-                mensaje.startsWith("✓") ? "text-green-600" : "text-red-600"
+                mensaje.startsWith("✓") ? "text-green-700" : "text-red-600"
               }
             >
               {mensaje}

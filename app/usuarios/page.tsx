@@ -99,7 +99,7 @@ function Perfiles() {
         </ol>
         <p>Guardar un perfil no envía una invitación por correo.</p>
         <p><a href="/activar-cuenta">Abrir página de activación</a></p>
-        <button type="button" onClick={async () => {
+        <button type="button" className="secondary" onClick={async () => {
           const url = window.location.origin + "/activar-cuenta";
           try {
             await navigator.clipboard.writeText(url);
@@ -156,6 +156,10 @@ function Perfiles() {
               </option>
             ))}
           </select>
+          <span className="hint">
+            Obligatorio para supervisores. Un operador con turno solo puede
+            registrar scrap de ese turno; sin turno puede registrar en cualquiera.
+          </span>
         </label>
         <label>
           Estado
@@ -180,8 +184,8 @@ function Perfiles() {
         <h2>Eliminar invitación</h2>
         <p>¿Retirar a <strong>{retirar.nombre} ({retirar.correo})</strong> de la lista de invitados?</p>
         <p>Este correo perderá la autorización de acceso. Puedes restaurarlo guardando de nuevo su perfil. No se borrará una cuenta ni registros de producción.</p>
-        <button type="button" disabled={busy} onClick={() => void eliminarInvitacion()}>{busy ? "Eliminando…" : "Confirmar eliminación"}</button>{" "}
-        <button type="button" disabled={busy} onClick={() => setRetirar(null)}>Cancelar</button>
+        <button type="button" className="secondary" disabled={busy} onClick={() => void eliminarInvitacion()}>{busy ? "Eliminando…" : "Confirmar eliminación"}</button>{" "}
+        <button type="button" className="secondary" disabled={busy} onClick={() => setRetirar(null)}>Cancelar</button>
       </section>}
       <section className="surface table-scroll">
         <table>
@@ -208,7 +212,7 @@ function Perfiles() {
                       : "Sin vincular"}
                 </td>
                 <td>{!r.auth_user_id
-                  ? <button type="button" disabled={busy} onClick={() => { setRetirar(r); setMessage(""); }} aria-label={`Eliminar invitación de ${r.correo}`}>Eliminar invitación</button>
+                  ? <button type="button" className="secondary" disabled={busy} onClick={() => { setRetirar(r); setMessage(""); }} aria-label={`Eliminar invitación de ${r.correo}`}>Eliminar invitación</button>
                   : <span className="hint">Cuenta vinculada: usa Estado Inactivo para retirar acceso.</span>}</td>
               </tr>
             ))}

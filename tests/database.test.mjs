@@ -57,16 +57,19 @@ for (let i = 0; i < 5; i++)
       `00000000-0000-4000-8000-00000000000${i + 1}`,
     ],
   );
-await db.exec(
-  await fs.readFile(
-    root + "/supabase/migrations/202610080002_activar_rls.sql",
-    "utf8",
-  ),
+const activarRlsSql = await fs.readFile(
+  root + "/supabase/migrations/202610080002_activar_rls.sql",
+  "utf8",
 );
+await db.exec(activarRlsSql);
+await db.exec(activarRlsSql); // la migración debe poder repetirse sin error
 const tests = [];
 const invitacionesSql = await fs.readFile(root + "/supabase/migrations/202610100001_retirar_invitaciones.sql", "utf8");
 await db.exec(invitacionesSql);
 await db.exec(invitacionesSql);
+const turnoOperadorSql = await fs.readFile(root + "/supabase/migrations/202610100002_turno_operador.sql", "utf8");
+await db.exec(turnoOperadorSql);
+await db.exec(turnoOperadorSql);
 async function asRole(i) {
   await db.exec("reset role");
   await db.query(`select set_config('request.jwt.claim.sub',$1,false)`, [
@@ -250,6 +253,29 @@ await fail(
   "Operador no administra perfiles",
   "select administrar_perfil('otro@example.invalid','Otro','administrador',null,true)",
 );
+const capturaNocturna = (uuid) =>
+  `select guardar_captura('2026-10-04',1,2,1,1,1,1,7,1,5,'','${uuid}')`;
+await fail(
+  "Operador con turno asignado no captura otro turno",
+  capturaNocturna("55555555-5555-4555-8555-555555555555"),
+);
+check(
+  "Captura rechazada por turno no deja encabezado",
+  (await db.query("select * from registro_produccion where fecha='2026-10-04'"))
+    .rows.length === 0,
+);
+await db.exec("reset role");
+await db.exec("update usuario set id_turno=null where correo='operador@example.invalid'");
+await asRole(1);
+await db.exec(capturaNocturna("66666666-6666-4666-8666-666666666666"));
+check(
+  "Operador sin turno asignado puede capturar cualquier turno",
+  (await db.query("select * from registro_produccion where fecha='2026-10-04' and id_turno=2"))
+    .rows.length === 1,
+);
+await db.exec("reset role");
+await db.exec("update usuario set id_turno=1 where correo='operador@example.invalid'");
+await asRole(1);
 await fail(
   "Lote resina incompatible no deja encabezado",
   "select guardar_captura('2026-10-05',1,1,1,1,1,999,7,1,2,'','44444444-4444-4444-8444-444444444444')",

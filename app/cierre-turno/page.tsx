@@ -36,7 +36,20 @@ function Formulario() {
   const [ok, setOk] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [nombres, setNombres] = useState<Record<string, Record<number, string>>>({});
   useEffect(() => {
+    // Nombres para mostrar en el selector; si falla la consulta se muestran los números como antes.
+    Promise.all([
+      supabase.from("maquina").select("id_maquina,nombre"),
+      supabase.from("turno").select("id_turno,nombre"),
+      supabase.from("pieza").select("id_pieza,nombre"),
+    ]).then(([m, t, p]) =>
+      setNombres({
+        maquina: Object.fromEntries((m.data ?? []).map((r) => [r.id_maquina, r.nombre])),
+        turno: Object.fromEntries((t.data ?? []).map((r) => [r.id_turno, r.nombre])),
+        pieza: Object.fromEntries((p.data ?? []).map((r) => [r.id_pieza, r.nombre])),
+      }),
+    );
     supabase
       .from("registro_produccion")
       .select("id_registro,fecha,id_maquina,id_turno,id_pieza,cerrado_en")
@@ -142,8 +155,10 @@ function Formulario() {
             <option value="">Selecciona un registro</option>
             {registros.map((r) => (
               <option key={r.id_registro} value={r.id_registro}>
-                #{r.id_registro} · {r.fecha} · Máquina {r.id_maquina} · Turno{" "}
-                {r.id_turno} · Pieza {r.id_pieza}
+                #{r.id_registro} · {r.fecha} ·{" "}
+                {nombres.maquina?.[r.id_maquina] ?? `Máquina ${r.id_maquina}`} ·{" "}
+                {nombres.turno?.[r.id_turno] ?? `Turno ${r.id_turno}`} ·{" "}
+                {nombres.pieza?.[r.id_pieza] ?? `Pieza ${r.id_pieza}`}
                 {r.cerrado_en ? " · Cerrado" : ""}
               </option>
             ))}
@@ -170,6 +185,13 @@ function Formulario() {
               ))}
             </tbody>
           </table>
+          {!horas.length && (
+            <p className="hint">
+              {id
+                ? "Este registro todavía no tiene horas capturadas."
+                : "Selecciona un registro para ver sus horas."}
+            </p>
+          )}
         </div>
       </section>
       <form onSubmit={guardar} className="surface form-grid">

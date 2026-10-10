@@ -293,6 +293,23 @@ button:disabled {
 .error {
   color: #b42335;
 }
+/* Enlaces, listas y botones secundarios reconocibles dentro del contenido. */
+.workspace a:not(.primary) {
+  color: #0f766e;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.workspace ol {
+  list-style: decimal;
+  padding-left: 22px;
+  margin-bottom: 12px;
+}
+.workspace button.secondary {
+  border: 1px solid #d9e2eb;
+  border-radius: 8px;
+  background: white;
+  padding: 0 18px;
+}
 .page-title {
   display: flex;
   justify-content: space-between;
