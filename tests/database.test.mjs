@@ -64,6 +64,9 @@ await db.exec(
   ),
 );
 const tests = [];
+const invitacionesSql = await fs.readFile(root + "/supabase/migrations/202610100001_retirar_invitaciones.sql", "utf8");
+await db.exec(invitacionesSql);
+await db.exec(invitacionesSql);
 async function asRole(i) {
   await db.exec("reset role");
   await db.query(`select set_config('request.jwt.claim.sub',$1,false)`, [
@@ -260,6 +263,32 @@ await db.exec("reset role");
 await db.exec("set role anon");
 await fail("Anonimo sin acceso al panel", "select * from v_scrap_turno");
 await fail("Anonimo sin acceso a perfiles", "select * from usuario");
+await db.exec("reset role");
+await asRole(5);
+await db.exec("select administrar_perfil('pendiente@example.invalid','Pendiente','operador',1,true)");
+await asRole(1);
+await fail("Operador no retira invitaciones", "select retirar_invitacion('pendiente@example.invalid')");
+await asRole(5);
+await fail("No retira cuenta vinculada propia", "select retirar_invitacion('administrador@example.invalid')");
+await fail("No retira cuenta vinculada ajena", "select retirar_invitacion('operador@example.invalid')");
+await fail("Invitacion inexistente informa error", "select retirar_invitacion('ausente@example.invalid')");
+await db.exec("select retirar_invitacion(' PENDIENTE@example.invalid ')");
+await db.exec("select retirar_invitacion('pendiente@example.invalid')");
+const retirada = (await db.query("select activo,invitacion_retirada_en from usuario where correo='pendiente@example.invalid'")).rows[0];
+check("Retirada reversible e idempotente desactiva y archiva", !retirada.activo && !!retirada.invitacion_retirada_en);
+await db.exec("reset role");
+await db.exec("insert into auth.users values('00000000-0000-4000-8000-000000000006','pendiente@example.invalid',now())");
+await asRole(6);
+await db.exec("select vincular_mi_perfil()");
+check("Invitado retirado no obtiene acceso al confirmar correo", (await db.query("select privado.rol_actual() rol")).rows[0].rol === null);
+await asRole(5);
+await db.exec("select administrar_perfil('pendiente@example.invalid','Restaurado','operador',1,true)");
+check("Guardar perfil restaura invitacion sin duplicar", (await db.query("select count(*) n from usuario where correo='pendiente@example.invalid' and activo and invitacion_retirada_en is null")).rows[0].n === 1);
+await asRole(6);
+await db.exec("select vincular_mi_perfil()");
+check("Invitacion restaurada vuelve a permitir vinculacion", (await db.query("select privado.rol_actual() rol")).rows[0].rol === 'operador');
+await db.exec("reset role; set role anon");
+await fail("Anonimo no retira invitaciones", "select retirar_invitacion('pendiente@example.invalid')");
 await db.exec("reset role");
 console.log(JSON.stringify({ passed: tests.length, tests }, null, 2));
 await db.close();

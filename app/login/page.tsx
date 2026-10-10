@@ -62,6 +62,7 @@ export default function Login() {
         <button className="primary" disabled={busy}>
           {busy ? "Ingresando…" : "Iniciar sesión"}
         </button>
+        <a href="/recuperar-contrasena">Olvidé mi contraseña</a>
         <a href="/activar-cuenta">Primera vez: activar mi cuenta autorizada</a>
         <p className="hint">
           Las cuentas y sus permisos son asignados por el administrador.

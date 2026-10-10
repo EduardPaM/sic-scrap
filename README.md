@@ -8,7 +8,7 @@ Entorno verificado: Node 24.21.0, npm 11.19, Next.js 16.3.8. Instalar con `npm c
 
 - `npm run dev`: http://localhost:3000
 - `npm run lint`: análisis estático.
-- `npm test`: 30 comprobaciones en PostgreSQL aislado (PGlite), sin tocar Supabase.
+- `npm test`: 6 pruebas de formulario y 39 comprobaciones en PostgreSQL aislado (PGlite), sin tocar Supabase.
 - `npm run build`: compilación de producción.
 - `npm audit --omit=dev`: dependencias de ejecución. Revisar también auditoría completa de herramientas; no aplicar `--force` sin evaluar incompatibilidades.
 
@@ -25,6 +25,10 @@ Toda escritura de la aplicación utiliza RPC con rol y turno comprobados. Las ta
 ## Acceso
 
 Un administrador preasigna correo, rol y, para supervisor, turno desde `/usuarios`. Cada persona establece su propia contraseña en `/activar-cuenta` y confirma el correo. Vincular un usuario Auth sin perfil preasignado no concede acceso. Revisar Site URL y Redirect URLs de Supabase para cada ambiente antes de activar nuevas cuentas.
+
+Desde `/login`, «Olvidé mi contraseña» abre `/recuperar-contrasena`. Supabase envía el enlace por SMTP a `/restablecer-contrasena`, donde una sesión verificada permite establecer y confirmar una contraseña de al menos 12 caracteres. La respuesta al solicitar correo no revela si existe la cuenta. Autorizar expresamente `https://sic-scrap.vercel.app/restablecer-contrasena` en Authentication > URL Configuration. Para probar en desarrollo, autorizar también `http://localhost:3000/restablecer-contrasena`.
+
+La migración `202610100001_retirar_invitaciones.sql` permite al administrador retirar perfiles sin vincular. «Eliminar invitación» pide confirmación y archiva/desactiva el perfil; no borra cuentas Auth ni producción. Guardar de nuevo el mismo correo restaura el perfil. Las cuentas vinculadas no pueden retirarse por esta función: usar Estado Inactivo para revocar acceso. La base valida estas reglas aunque se invoque la función fuera de la interfaz.
 
 - Operador: captura de scrap, panel y alertas.
 - Supervisor: panel; abre, registra producción y cierra únicamente su turno asignado.
