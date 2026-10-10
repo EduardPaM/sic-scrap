@@ -35,6 +35,12 @@ export default function RestablecerContrasena() {
     setBusy(true);
     setMessage("");
     try {
+      const { data: identity, error: identityError } = await supabase.auth.getUser();
+      if (identityError || identity.user?.email !== email) {
+        setEmail("");
+        setMessage("La sesión cambió o venció. Abre de nuevo tu enlace de recuperación.");
+        return;
+      }
       const { error } = await supabase.auth.updateUser({ password });
       if (error) {
         setMessage(error.code === "same_password"
@@ -44,10 +50,12 @@ export default function RestablecerContrasena() {
       }
       setPassword(""); setConfirm(""); setDone(true);
       // Password is already changed even if closing the local session fails.
-      const { error: logoutError } = await supabase.auth.signOut({ scope: "local" });
-      setMessage(logoutError
-        ? "Contraseña actualizada. No se pudo cerrar esta sesión; puedes hacerlo con Salir."
-        : "Contraseña actualizada. Ya puedes iniciar sesión con tu nueva contraseña.");
+      try {
+        const { error: logoutError } = await supabase.auth.signOut({ scope: "local" });
+        setMessage(logoutError
+          ? "Contraseña actualizada. No se pudo cerrar esta sesión; puedes hacerlo con Salir."
+          : "Contraseña actualizada. Ya puedes iniciar sesión con tu nueva contraseña.");
+      } catch { setMessage("Contraseña actualizada. No se pudo cerrar esta sesión; puedes hacerlo con Salir."); }
     } catch { setMessage("No se confirmó la operación. Comprueba tu conexión antes de volver a intentarlo."); }
     finally { setBusy(false); }
   }
