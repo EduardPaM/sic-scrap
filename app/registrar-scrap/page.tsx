@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 
 import { Access } from "@/components/session";
+import { camposScrap as campos, camposFaltantes, cambiarCampoScrap, type CampoScrap, type FormScrap } from "@/lib/scrap-form";
 
 type Catalogo = { id: number; nombre: string };
 
@@ -50,6 +51,16 @@ export default function RegistrarScrapPage() {
   const bloqueo = useRef(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [validar, setValidar] = useState(false);
+  const [avisoLote, setAvisoLote] = useState("");
+  const faltantes = camposFaltantes(form);
+  function atributos(campo: CampoScrap) {
+    return {
+      id: `scrap-${campo}`,
+      "aria-required": true as const,
+      "aria-invalid": validar && faltantes.includes(campo),
+    };
+  }
 
   useEffect(() => {
     async function cargarCatalogos() {
@@ -98,30 +109,24 @@ export default function RegistrarScrapPage() {
     cargarCatalogos();
   }, []);
 
-  function actualizarCampo(campo: string, valor: string) {
+  function actualizarCampo(campo: keyof FormScrap, valor: string) {
     solicitud.current = null;
-    setForm((prev) => ({
-      ...prev,
-      [campo]: valor,
-      ...(campo === "resina" ? { lote: "" } : {}),
-    }));
+    setMensaje(null);
+    const siguiente = cambiarCampoScrap(form, campo, valor, lotes);
+    const limpiarLote = !!form.lote && !siguiente.lote;
+    if (campo === "resina" || campo === "lote") {
+      setAvisoLote(limpiarLote ? "La resina cambió: selecciona un lote que corresponda a esta resina." : "");
+    }
+    setForm((prev) => cambiarCampoScrap(prev, campo, valor, lotes));
   }
 
   async function registrarScrap() {
     if (bloqueo.current) return;
     setMensaje(null);
-    if (
-      !form.maquina ||
-      !form.turno ||
-      !form.pieza ||
-      !form.lote ||
-      !form.molde ||
-      !form.resina ||
-      !form.causa ||
-      !form.fecha ||
-      form.hora === ""
-    ) {
-      setMensaje("Error: completa los campos obligatorios.");
+    setValidar(true);
+    if (faltantes.length) {
+      setMensaje(`Falta completar: ${faltantes.map((campo) => campos[campo]).join(", ")}.`);
+      document.getElementById(`scrap-${faltantes[0]}`)?.focus();
       return;
     }
     const cantidad = Number(form.cantidad),
@@ -183,6 +188,7 @@ export default function RegistrarScrapPage() {
         observaciones: "",
       }));
       solicitud.current = null;
+      setValidar(false);
     } catch {
       setMensaje(
         "Error de conexión. Puedes reintentar sin duplicar la captura.",
@@ -203,6 +209,7 @@ export default function RegistrarScrapPage() {
             <label>
               Fecha de inicio del turno
               <input
+                {...atributos("fecha")}
                 type="date"
                 value={form.fecha}
                 onChange={(e) => actualizarCampo("fecha", e.target.value)}
@@ -211,6 +218,7 @@ export default function RegistrarScrapPage() {
             <label>
               Hora del reloj (0–23)
               <input
+                {...atributos("hora")}
                 type="number"
                 min="0"
                 max="23"
@@ -224,7 +232,7 @@ export default function RegistrarScrapPage() {
             de medianoche. Cantidades en piezas.
           </p>
           <p className="text-sm text-muted-foreground">
-            Captura rápida de piezas rechazadas
+            Todos los campos son obligatorios excepto Observaciones.
           </p>
 
           <div className="space-y-2">
@@ -233,7 +241,7 @@ export default function RegistrarScrapPage() {
               value={form.maquina}
               onValueChange={(v) => actualizarCampo("maquina", v)}
             >
-              <SelectTrigger aria-label="Máquina">
+              <SelectTrigger {...atributos("maquina")} aria-label="Máquina">
                 <SelectValue placeholder="Seleccionar máquina" />
               </SelectTrigger>
               <SelectContent>
@@ -252,7 +260,7 @@ export default function RegistrarScrapPage() {
               value={form.turno}
               onValueChange={(v) => actualizarCampo("turno", v)}
             >
-              <SelectTrigger aria-label="Turno">
+              <SelectTrigger {...atributos("turno")} aria-label="Turno">
                 <SelectValue placeholder="Seleccionar turno" />
               </SelectTrigger>
               <SelectContent>
@@ -271,7 +279,7 @@ export default function RegistrarScrapPage() {
               value={form.pieza}
               onValueChange={(v) => actualizarCampo("pieza", v)}
             >
-              <SelectTrigger aria-label="Pieza / producto">
+              <SelectTrigger {...atributos("pieza")} aria-label="Pieza / producto">
                 <SelectValue placeholder="Seleccionar producto" />
               </SelectTrigger>
               <SelectContent>
@@ -290,10 +298,13 @@ export default function RegistrarScrapPage() {
               value={form.lote}
               onValueChange={(v) => actualizarCampo("lote", v)}
             >
-              <SelectTrigger aria-label="Lote">
+              <SelectTrigger {...atributos("lote")} aria-label="Lote" aria-describedby="ayuda-lote">
                 <SelectValue placeholder="Seleccionar lote" />
               </SelectTrigger>
               <SelectContent>
+                {!lotes.some((l) => !form.resina || l.id_resina === Number(form.resina)) && (
+                  <p className="p-3 text-sm">No hay lotes disponibles para esta resina. Solicita el alta del lote al administrador.</p>
+                )}
                 {lotes
                   .filter(
                     (l) => !form.resina || l.id_resina === Number(form.resina),
@@ -305,6 +316,10 @@ export default function RegistrarScrapPage() {
                   ))}
               </SelectContent>
             </Select>
+            <p id="ayuda-lote" className="hint">
+              {avisoLote || "Selecciona el lote real de materia prima. Su resina se completa automáticamente; si eliges otra resina, solo se muestran sus lotes."}
+            </p>
+            {validar && !form.lote && <p className="text-sm text-red-600">Falta seleccionar el lote.</p>}
           </div>
 
           <div className="space-y-2">
@@ -313,7 +328,7 @@ export default function RegistrarScrapPage() {
               value={form.molde}
               onValueChange={(v) => actualizarCampo("molde", v)}
             >
-              <SelectTrigger aria-label="Molde">
+              <SelectTrigger {...atributos("molde")} aria-label="Molde">
                 <SelectValue placeholder="Seleccionar molde" />
               </SelectTrigger>
               <SelectContent>
@@ -332,7 +347,7 @@ export default function RegistrarScrapPage() {
               value={form.resina}
               onValueChange={(v) => actualizarCampo("resina", v)}
             >
-              <SelectTrigger aria-label="Resina">
+              <SelectTrigger {...atributos("resina")} aria-label="Resina">
                 <SelectValue placeholder="Seleccionar resina" />
               </SelectTrigger>
               <SelectContent>
@@ -346,8 +361,9 @@ export default function RegistrarScrapPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cantidad-scrap">Cantidad de scrap</Label>
+            <Label htmlFor="scrap-cantidad">Cantidad de scrap</Label>
             <Input
+              {...atributos("cantidad")}
               type="number"
               min={1}
               value={form.cantidad}
@@ -361,7 +377,7 @@ export default function RegistrarScrapPage() {
               value={form.causa}
               onValueChange={(v) => actualizarCampo("causa", v)}
             >
-              <SelectTrigger aria-label="Causa del scrap">
+              <SelectTrigger {...atributos("causa")} aria-label="Causa del scrap">
                 <SelectValue placeholder="Seleccionar causa" />
               </SelectTrigger>
               <SelectContent>

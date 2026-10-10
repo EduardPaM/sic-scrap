@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node tests/database.test.mjs"
+    "test": "node --test tests/scrap-form.test.mjs && node tests/database.test.mjs"
   },
   "dependencies": {
     "@radix-ui/react-select": "^2.3.7",
