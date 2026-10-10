@@ -29,6 +29,9 @@ function Perfiles() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [retirar, setRetirar] = useState<Perfil | null>(null);
+  useEffect(() => {
+    if (retirar) document.getElementById("confirmar-invitacion")?.focus();
+  }, [retirar]);
   async function load() {
     const { data, error } = await supabase
       .from("usuario")
@@ -173,7 +176,7 @@ function Perfiles() {
           {message}
         </p>
       )}
-      {retirar && <section className="surface" role="region" aria-label="Confirmar eliminación de invitación">
+      {retirar && <section id="confirmar-invitacion" tabIndex={-1} className="surface" role="region" aria-label="Confirmar eliminación de invitación">
         <h2>Eliminar invitación</h2>
         <p>¿Retirar a <strong>{retirar.nombre} ({retirar.correo})</strong> de la lista de invitados?</p>
         <p>Este correo perderá la autorización de acceso. Puedes restaurarlo guardando de nuevo su perfil. No se borrará una cuenta ni registros de producción.</p>
