@@ -8,7 +8,7 @@ Entorno verificado: Node 24.21.0, npm 11.19, Next.js 16.3.8. Instalar con `npm c
 
 - `npm run dev`: http://localhost:3000
 - `npm run lint`: análisis estático.
-- `npm test`: 15 pruebas de formulario y 66 comprobaciones en PostgreSQL aislado (PGlite), sin tocar Supabase.
+- `npm test`: 15 pruebas de formulario, 5 de gráficas y 66 comprobaciones en PostgreSQL aislado (PGlite), sin tocar Supabase.
 - `npm run build`: compilación de producción.
 - `npm audit --omit=dev`: dependencias de ejecución. Revisar también auditoría completa de herramientas; no aplicar `--force` sin evaluar incompatibilidades.
 
@@ -32,7 +32,7 @@ La migración `202610100001_retirar_invitaciones.sql` permite al administrador r
 
 - Operador: captura de scrap, panel y alertas.
 - Supervisor: panel; abre, registra producción y cierra únicamente su turno asignado.
-- Producción y calidad: consulta del panel y exportación Excel. Todos los perfiles activos pueden consultar y exportar; las gráficas adicionales siguen pendientes.
+- Producción y calidad: consulta del panel, gráficas y exportación Excel. Todos los perfiles activos pueden consultar y exportar.
 - Administrador: perfiles y producción/cierre. No suplanta la captura exclusiva del operador.
 
 ## Reglas
@@ -47,7 +47,7 @@ Alertas derivadas reflejan el estado actual y no constituyen un historial de not
 
 El cierre es por registro de molde/lote, no un cierre global de máquina/turno. El panel limita la consulta a 1,000 grupos y advierte cuando alcanza el límite; el selector de cierre a 500 registros. Las escrituras usan un bloqueo transaccional global para evitar encabezados duplicados; medir concurrencia antes de escalar a varias líneas. No se migraron ni borraron duplicados históricos.
 
-Faltan validaciones operativas con cuentas reales de todos los roles, Pareto/tendencias, edición de umbrales e historial de alertas. No hay una interfaz de reapertura ni de corrección de detalle scrap. Los números manuscritos de las fotos son evidencia por confirmar y no se cargan automáticamente.
+Faltan validaciones operativas con cuentas reales de todos los roles, edición de umbrales e historial de alertas. No hay una interfaz de reapertura ni de corrección de detalle scrap. Los números manuscritos de las fotos son evidencia por confirmar y no se cargan automáticamente.
 
 ## Moldes y TRS (14-oct-2026)
 
@@ -62,3 +62,5 @@ TRS = piezas OK / (objetivo de piezas por hora × horas programadas) × 100. La 
 Excel incluye Detalle scrap, Por hora, TRS por registro e Info. La exportación de César integrada por Ana se conserva; la trazabilidad usa el molde canónico y la producción horaria derivada de los detalles. Se añadió el enlace de exportación a la navegación.
 
 En captura y apertura se puede elegir primero máquina o molde. Una relación única completa automáticamente el otro campo; varias relaciones mantienen una elección compatible o solicitan elegir sin asumir la primera. Las cantidades y observaciones se conservan al cambiar la selección. Las relaciones de la imagen y las históricas se validan también en la base de datos.
+
+Se conserva además la aportación de gráficas y Pareto de César integrada por Ana en el PR #3 durante esta actualización. Usa cantidades en piezas y las vistas compatibles con la migración de moldes.
