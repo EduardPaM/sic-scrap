@@ -1,9 +1,22 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cambiarCampoScrap, camposFaltantes } from '../lib/scrap-form.ts';
+import { moldePermitido } from '../lib/moldes.ts';
 
 const lotes = [{ id_lote: 1, id_resina: 2 }, { id_lote: 2, id_resina: 3 }];
-const completo = { fecha: '2026-10-09', hora: '0', maquina: '1', turno: '2', pieza: '3', lote: '1', molde: '1', resina: '2', cantidad: '587', causa: '4', observaciones: 'demasiada humedad' };
+const completo = { fecha: '2026-10-09', hora: '0', maquina: '1', turno: '2', lote: '1', molde: '1', resina: '2', cantidad: '587', causa: '4', observaciones: 'demasiada humedad' };
+
+test('captura completa sin selector de pieza; molde obligatorio', () => {
+  assert.deepEqual(camposFaltantes(completo), []);
+  assert.deepEqual(camposFaltantes({ ...completo, molde: '' }), ['molde']);
+});
+test('solo ofrece moldes correspondientes a la maquina', () => {
+  const relaciones = [{ id_maquina: 1, id_molde: 5 }, { id_maquina: 2, id_molde: 6 }];
+  assert.equal(moldePermitido('', 5, relaciones), false);
+  assert.equal(moldePermitido('1', 5, relaciones), true);
+  assert.equal(moldePermitido('1', 6, relaciones), false);
+  assert.equal(moldePermitido('3', 5, relaciones), true);
+});
 
 test('identifica el lote faltante del caso reportado sin perder la captura', () => {
   const form = { ...completo, lote: '' };

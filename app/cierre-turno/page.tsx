@@ -8,7 +8,7 @@ type Registro = {
   fecha: string;
   id_maquina: number;
   id_turno: number;
-  id_pieza: number;
+  id_molde: number;
   cerrado_en: string | null;
 };
 type Hora = {
@@ -42,17 +42,17 @@ function Formulario() {
     Promise.all([
       supabase.from("maquina").select("id_maquina,nombre"),
       supabase.from("turno").select("id_turno,nombre"),
-      supabase.from("pieza").select("id_pieza,nombre"),
+      supabase.from("molde").select("id_molde,codigo_molde"),
     ]).then(([m, t, p]) =>
       setNombres({
         maquina: Object.fromEntries((m.data ?? []).map((r) => [r.id_maquina, r.nombre])),
         turno: Object.fromEntries((t.data ?? []).map((r) => [r.id_turno, r.nombre])),
-        pieza: Object.fromEntries((p.data ?? []).map((r) => [r.id_pieza, r.nombre])),
+        molde: Object.fromEntries((p.data ?? []).map((r) => [r.id_molde, r.codigo_molde])),
       }),
     );
     supabase
       .from("registro_produccion")
-      .select("id_registro,fecha,id_maquina,id_turno,id_pieza,cerrado_en")
+      .select("id_registro,fecha,id_maquina,id_turno,id_molde,cerrado_en")
       .order("fecha", { ascending: false })
       .limit(500)
       .then(({ data, error }) => {
@@ -133,7 +133,7 @@ function Formulario() {
           void refresh(String(value));
           supabase
             .from("registro_produccion")
-            .select("id_registro,fecha,id_maquina,id_turno,id_pieza,cerrado_en")
+            .select("id_registro,fecha,id_maquina,id_turno,id_molde,cerrado_en")
             .order("fecha", { ascending: false })
             .limit(500)
             .then(({ data }) => setRegistros(data ?? []));
@@ -158,7 +158,7 @@ function Formulario() {
                 #{r.id_registro} · {r.fecha} ·{" "}
                 {nombres.maquina?.[r.id_maquina] ?? `Máquina ${r.id_maquina}`} ·{" "}
                 {nombres.turno?.[r.id_turno] ?? `Turno ${r.id_turno}`} ·{" "}
-                {nombres.pieza?.[r.id_pieza] ?? `Pieza ${r.id_pieza}`}
+                {nombres.molde?.[r.id_molde] ?? `Molde ${r.id_molde}`}
                 {r.cerrado_en ? " · Cerrado" : ""}
               </option>
             ))}
@@ -266,8 +266,8 @@ function Formulario() {
           />
         </label>
         <p className="hint">
-          El cierre se realiza por registro de pieza y lote. Las piezas OK deben
-          coincidir con la producción horaria.
+          El cierre se realiza por registro de molde y lote. Las piezas OK deben
+          coincidir con la producción horaria. TRS = piezas OK ÷ (objetivo por hora × horas programadas) × 100. Meta mínima: 86%. El resultado definitivo aparece en el panel al cerrar todos los registros del grupo.
         </p>
         <button className="primary full" disabled={busy || !id || closed}>
           {closed ? "Registro cerrado" : "Guardar cierre"}

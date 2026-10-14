@@ -3,7 +3,6 @@ export const camposScrap = {
   hora: "Hora del reloj",
   maquina: "Máquina",
   turno: "Turno",
-  pieza: "Pieza / producto",
   lote: "Lote",
   molde: "Molde",
   resina: "Resina",

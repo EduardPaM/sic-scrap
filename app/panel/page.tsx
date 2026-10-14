@@ -14,6 +14,9 @@ type KPI = {
   pct_scrap: number | null;
   horas_incompletas: number;
   alerta_activa: boolean;
+  pct_trs: number | null;
+  alerta_trs: boolean;
+  registros_pendientes_trs: number;
 };
 const fmt = (x: number) => new Intl.NumberFormat("es-MX").format(x);
 // Sin fecha elegida solo se consultan los últimos 30 días para no recorrer todo el historial cada 15 s.
@@ -40,7 +43,7 @@ function Dashboard() {
   const load = useCallback(async () => {
     const current = ++request.current.generation;
     let q = supabase
-      .from("v_scrap_turno")
+      .from("v_panel_turno")
       .select("*")
       .order("fecha", { ascending: false });
     q = date ? q.eq("fecha", date) : q.gte("fecha", hace30Dias());
@@ -73,7 +76,7 @@ function Dashboard() {
   const filtered = rows.filter(
     (r) => !machine || String(r.id_maquina) === machine,
   );
-  const alerts = filtered.filter((r) => r.alerta_activa);
+  const alerts = filtered.filter((r) => r.alerta_activa || r.alerta_trs);
   const qty = filtered.reduce((a, r) => a + Number(r.piezas_inyectadas), 0);
   const scrap = filtered.reduce((a, r) => a + Number(r.piezas_scrap), 0);
   return (
@@ -159,10 +162,10 @@ function Dashboard() {
           className="alert-box"
           key={`${r.fecha}-${r.id_maquina}-${r.id_turno}`}
         >
-          <strong>ALERTA: SCRAP SUPERIOR AL 3%</strong>
+          <strong>{[r.alerta_activa && "SCRAP SUPERIOR AL 3%", r.alerta_trs && "TRS INFERIOR AL 86%"].filter(Boolean).join(" · ")}</strong>
           <span>
             {r.maquina} · {r.turno} · {r.fecha} ·{" "}
-            {Number(r.pct_scrap).toFixed(2)} %
+            Scrap: {r.pct_scrap == null ? "Pendiente" : `${Number(r.pct_scrap).toFixed(2)} %`} · TRS: {r.pct_trs == null ? "Pendiente de cierre" : `${Number(r.pct_trs).toFixed(2)} %`}
           </span>
         </div>
       ))}
@@ -180,7 +183,9 @@ function Dashboard() {
                   "Scrap",
                   "OK",
                   "% scrap",
-                  "Estado",
+                  "Estado scrap",
+                  "TRS (meta ≥ 86%)",
+                  "Estado TRS",
                 ].map((h) => (
                   <th key={h}>{h}</th>
                 ))}
@@ -217,6 +222,10 @@ function Dashboard() {
                           : "En rango"}
                     </span>
                   </td>
+                  <td>{r.pct_trs == null ? "—" : `${Number(r.pct_trs).toFixed(2)} %`}</td>
+                  <td><span className={r.pct_trs == null ? "badge pending" : r.alerta_trs ? "badge danger" : "badge good"}>
+                    {r.pct_trs == null ? `Pendiente de cierre (${r.registros_pendientes_trs})` : r.alerta_trs ? "Bajo meta" : "Meta cumplida"}
+                  </span></td>
                 </tr>
               ))}
             </tbody>
@@ -233,6 +242,10 @@ function Dashboard() {
           % scrap = piezas scrap ÷ piezas inyectadas × 100. El umbral se evalúa
           sin redondear. Un turno sin producción completa no se presenta como 0
           %.
+          {" "}TRS = piezas OK ÷ (objetivo por hora × horas programadas) × 100.
+          Se suman los objetivos de los registros una sola vez, no se promedian porcentajes.
+          Se calcula al cerrar todos los registros del grupo. Exactamente 86% cumple la meta;
+          un valor inferior activa alerta, sin redondear para decidir.
         </p>
       </section>
       <p className="hint">

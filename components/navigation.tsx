@@ -9,6 +9,7 @@ export function Navigation() {
   const rol = perfil?.rol.toLowerCase();
   const links = [
     ["/panel", "Panel"],
+    ["/exportar", "Exportar Excel"],
     ...(rol === "administrador" ? [["/usuarios", "Usuarios"]] : []),
     ...(rol === "operador" ? [["/registrar-scrap", "Capturar scrap"]] : []),
     ...(["supervisor", "administrador"].includes(rol ?? "")

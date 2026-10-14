@@ -37,7 +37,7 @@ function indexar<T>(lista: T[], clave: keyof T): Map<number, T> {
 }
 
 type Registro = {
-  id_registro: number; fecha: string; id_maquina: number | null; id_pieza: number | null
+  id_registro: number; fecha: string; id_maquina: number | null; id_molde: number | null
   id_lote: number | null; id_turno: number | null; id_operador: number | null
 }
 type Hora = {
@@ -48,9 +48,9 @@ type Detalle = {
   id_detalle_scrap: number; id_produccion_hora: number; id_causa: number | null
   cantidad: number | null; observaciones: string | null
 }
-type UsoMolde = { id_registro: number; id_molde: number }
 type Lote = { id_lote: number; codigo_lote: string; id_resina: number | null }
 type Causa = { id_causa: number; codigo: string; nombre: string; categoria: string }
+type Trs = { id_registro: number; piezas_objetivo: number | null; piezas_ok: number; pct_trs: number | null; alerta_trs: boolean }
 
 export type ResultadoExportacion = { filasDetalle: number; filasHora: number; archivo: string }
 
@@ -68,7 +68,7 @@ export async function exportarScrapExcel(desde: string, hasta: string): Promise<
   // 1) Registros de producción dentro del rango de fechas
   const { data: regData, error: regError } = await supabase
     .from('registro_produccion')
-    .select('id_registro, fecha, id_maquina, id_pieza, id_lote, id_turno, id_operador')
+    .select('id_registro, fecha, id_maquina, id_molde, id_lote, id_turno, id_operador')
     .gte('fecha', desde)
     .lte('fecha', hasta)
     .order('fecha', { ascending: true })
@@ -79,14 +79,12 @@ export async function exportarScrapExcel(desde: string, hasta: string): Promise<
   const idsRegistro = registros.map(r => r.id_registro)
 
   // 2) Horas, moldes y catálogos
-  const [horas, usosMolde, maquinas, piezas, lotes, resinas, turnos, moldes, causas, personal] =
+  const [horas, maquinas, lotes, resinas, turnos, moldes, causas, personal] =
     await Promise.all([
-      consultarPorIds<Hora>('produccion_hora',
+      consultarPorIds<Hora>('v_produccion_hora',
         'id_produccion_hora, id_registro, numero_hora, piezas_inyectadas, piezas_scrap',
         'id_registro', idsRegistro),
-      consultarPorIds<UsoMolde>('uso_molde', 'id_registro, id_molde', 'id_registro', idsRegistro),
       consultarTodo<{ id_maquina: number; nombre: string }>('maquina', 'id_maquina, nombre'),
-      consultarTodo<{ id_pieza: number; nombre: string }>('pieza', 'id_pieza, nombre'),
       consultarTodo<Lote>('lote_materia_prima', 'id_lote, codigo_lote, id_resina'),
       consultarTodo<{ id_resina: number; nombre: string }>('resina', 'id_resina, nombre'),
       consultarTodo<{ id_turno: number; nombre: string }>('turno', 'id_turno, nombre'),
@@ -103,21 +101,12 @@ export async function exportarScrapExcel(desde: string, hasta: string): Promise<
   const mRegistro = indexar(registros, 'id_registro')
   const mHora = indexar(horas, 'id_produccion_hora')
   const mMaquina = indexar(maquinas, 'id_maquina')
-  const mPieza = indexar(piezas, 'id_pieza')
   const mLote = indexar(lotes, 'id_lote')
   const mResina = indexar(resinas, 'id_resina')
   const mTurno = indexar(turnos, 'id_turno')
   const mMolde = indexar(moldes, 'id_molde')
   const mCausa = indexar(causas, 'id_causa')
   const mPersonal = indexar(personal, 'id_personal')
-
-  const moldesPorRegistro = new Map<number, string[]>()
-  for (const u of usosMolde) {
-    const codigo = mMolde.get(u.id_molde)?.codigo_molde ?? `#${u.id_molde}`
-    const lista = moldesPorRegistro.get(u.id_registro) ?? []
-    if (!lista.includes(codigo)) lista.push(codigo)
-    moldesPorRegistro.set(u.id_registro, lista)
-  }
 
   // Columnas de trazabilidad comunes a ambas hojas
   function trazabilidad(r: Registro): Fila {
@@ -128,10 +117,9 @@ export async function exportarScrapExcel(desde: string, hasta: string): Promise<
       'Fecha': r.fecha,
       'Turno': r.id_turno != null ? mTurno.get(r.id_turno)?.nombre ?? '' : '',
       'Máquina': r.id_maquina != null ? mMaquina.get(r.id_maquina)?.nombre ?? '' : '',
-      'Referencia de pieza': r.id_pieza != null ? mPieza.get(r.id_pieza)?.nombre ?? '' : '',
       'Lote': lote?.codigo_lote ?? '',
       'Resina (del lote)': resina?.nombre ?? '',
-      'Molde': (moldesPorRegistro.get(r.id_registro) ?? []).join(', '),
+      'Molde / # de parte': r.id_molde != null ? mMolde.get(r.id_molde)?.codigo_molde ?? `#${r.id_molde}` : '',
       'Operador': r.id_operador != null ? mPersonal.get(r.id_operador)?.nombre ?? '' : '',
     }
   }
@@ -178,11 +166,22 @@ export async function exportarScrapExcel(desde: string, hasta: string): Promise<
   hojaDetalle.sort(ordenar)
   hojaHora.sort(ordenar)
 
+  const resultadosTrs = await consultarPorIds<Trs>('v_trs_registro',
+    'id_registro,piezas_objetivo,piezas_ok,pct_trs,alerta_trs', 'id_registro', idsRegistro)
+  const hojaTrs: Fila[] = resultadosTrs.flatMap(t => {
+    const r = mRegistro.get(t.id_registro)
+    return r ? [{ ...trazabilidad(r), 'Piezas objetivo': t.piezas_objetivo ?? '',
+      'Piezas OK': t.piezas_ok, 'TRS (%)': t.pct_trs ?? 'Pendiente de cierre',
+      'Meta TRS (%)': 86, 'Estado TRS': t.pct_trs === null ? 'Pendiente de cierre' : t.alerta_trs ? 'Bajo meta' : 'Meta cumplida' }] : []
+  })
+  hojaTrs.sort(ordenar)
+
   const hojaInfo = [
     { 'Campo': 'Sistema', 'Valor': 'SIC SCRAP · Trazabilidad de scrap' },
     { 'Campo': 'Rango de fechas', 'Valor': `${desde} a ${hasta}` },
     { 'Campo': 'Generado', 'Valor': new Date().toLocaleString('es-MX') },
-    { 'Campo': 'Unidad de scrap', 'Valor': 'Piezas' },
+    { 'Campo': 'Unidad de scrap', 'Valor': 'Piezas (no kg)' },
+    { 'Campo': 'TRS', 'Valor': 'Piezas OK / (objetivo por hora × horas programadas) × 100; mínimo 86%' },
     { 'Campo': 'Fórmula % Scrap', 'Valor': 'Scrap / (OK + Scrap) × 100' },
     { 'Campo': 'Nota', 'Valor': 'El % Scrap solo se calcula cuando hay piezas inyectadas capturadas.' },
     { 'Campo': 'Filas de detalle', 'Valor': String(hojaDetalle.length) },
@@ -202,6 +201,7 @@ export async function exportarScrapExcel(desde: string, hasta: string): Promise<
   }
   agregar(hojaDetalle.length ? hojaDetalle : [{ 'Sin datos': 'No hay detalle de scrap en el rango' }], 'Detalle scrap')
   agregar(hojaHora.length ? hojaHora : [{ 'Sin datos': 'No hay producción por hora en el rango' }], 'Por hora')
+  agregar(hojaTrs, 'TRS por registro')
   agregar(hojaInfo, 'Info')
 
   const archivo = `SIC_SCRAP_${desde}_a_${hasta}.xlsx`

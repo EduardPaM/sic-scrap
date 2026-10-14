@@ -1,32 +1,34 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { moldePermitido, type RelacionMolde } from "@/lib/moldes";
 type Option = { id: number; nombre: string };
 export function AbrirProduccion({ onOpen }: { onOpen: (id: number) => void }) {
   const [catalogos, setCatalogos] = useState<Record<string, Option[]>>({});
   const [values, setValues] = useState<Record<string, string>>({});
+  const [relaciones, setRelaciones] = useState<RelacionMolde[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const fields = [
     ["maquina", "Máquina"],
     ["turno", "Turno"],
-    ["pieza", "Pieza"],
     ["lote", "Lote de resina"],
     ["molde", "Molde"],
   ];
   useEffect(() => {
     async function load() {
-      const [m, t, p, l, mo] = await Promise.all([
+      const [m, t, relaciones, l, mo] = await Promise.all([
         supabase.from("maquina").select("id_maquina,nombre"),
         supabase.from("turno").select("id_turno,nombre"),
-        supabase.from("pieza").select("id_pieza,nombre"),
+        supabase.from("maquina_molde").select("id_maquina,id_molde"),
         supabase.from("lote_materia_prima").select("id_lote,codigo_lote"),
-        supabase.from("molde").select("id_molde,codigo_molde"),
+        supabase.from("molde").select("id_molde,codigo_molde").eq("disponible_captura", true).order("codigo_molde"),
       ]);
-      if ([m, t, p, l, mo].some((r) => r.error)) {
+      if ([m, t, relaciones, l, mo].some((r) => r.error)) {
         setError("No se pudieron cargar los catálogos.");
         return;
       }
+      setRelaciones(relaciones.data ?? []);
       setCatalogos({
         maquina: (m.data ?? []).map((r) => ({
           id: r.id_maquina,
@@ -34,10 +36,6 @@ export function AbrirProduccion({ onOpen }: { onOpen: (id: number) => void }) {
         })),
         turno: (t.data ?? []).map((r) => ({
           id: r.id_turno,
-          nombre: r.nombre,
-        })),
-        pieza: (p.data ?? []).map((r) => ({
-          id: r.id_pieza,
           nombre: r.nombre,
         })),
         lote: (l.data ?? []).map((r) => ({
@@ -57,11 +55,10 @@ export function AbrirProduccion({ onOpen }: { onOpen: (id: number) => void }) {
     setBusy(true);
     setError("");
     try {
-      const { data, error } = await supabase.rpc("abrir_produccion", {
+      const { data, error } = await supabase.rpc("abrir_produccion_molde", {
         p_fecha: values.fecha,
         p_maquina: Number(values.maquina),
         p_turno: Number(values.turno),
-        p_pieza: Number(values.pieza),
         p_lote: Number(values.lote),
         p_molde: Number(values.molde),
       });
@@ -75,7 +72,7 @@ export function AbrirProduccion({ onOpen }: { onOpen: (id: number) => void }) {
   }
   return (
     <details className="surface">
-      <summary>Abrir producción de una pieza y lote</summary>
+      <summary>Abrir producción de un molde y lote</summary>
       <p className="hint">
         Permite registrar horas con cero scrap. Si el registro ya existe, se
         reutiliza.
@@ -96,10 +93,10 @@ export function AbrirProduccion({ onOpen }: { onOpen: (id: number) => void }) {
             <select
               required
               value={values[key] ?? ""}
-              onChange={(e) => setValues({ ...values, [key]: e.target.value })}
+              onChange={(e) => setValues({ ...values, [key]: e.target.value, ...(key === "maquina" ? { molde: "" } : {}) })}
             >
               <option value="">Seleccionar</option>
-              {catalogos[key]?.map((o) => (
+              {catalogos[key]?.filter((o) => key !== "molde" || moldePermitido(values.maquina, o.id, relaciones)).map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.nombre}
                 </option>

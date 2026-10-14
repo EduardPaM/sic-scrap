@@ -17,12 +17,14 @@ import {
 import { Access, useSession } from "@/components/session";
 import { camposScrap as campos, camposFaltantes, cambiarCampoScrap, type CampoScrap, type FormScrap } from "@/lib/scrap-form";
 
+import { moldePermitido, type RelacionMolde } from "@/lib/moldes";
+
 type Catalogo = { id: number; nombre: string };
 
 export default function RegistrarScrapPage() {
   const [maquinas, setMaquinas] = useState<Catalogo[]>([]);
   const [turnos, setTurnos] = useState<Catalogo[]>([]);
-  const [piezas, setPiezas] = useState<Catalogo[]>([]);
+  const [relaciones, setRelaciones] = useState<RelacionMolde[]>([]);
   const [lotes, setLotes] = useState<
     { id_lote: number; codigo_lote: string; id_resina: number }[]
   >([]);
@@ -37,7 +39,6 @@ export default function RegistrarScrapPage() {
   const [form, setForm] = useState({
     maquina: "",
     turno: "",
-    pieza: "",
     lote: "",
     molde: "",
     resina: "",
@@ -68,14 +69,14 @@ export default function RegistrarScrapPage() {
 
   useEffect(() => {
     async function cargarCatalogos() {
-      const [m, t, p, l, mo, r, c] = await Promise.all([
+      const [m, t, relaciones, l, mo, r, c] = await Promise.all([
         supabase.from("maquina").select("id_maquina, nombre"),
         supabase.from("turno").select("id_turno, nombre"),
-        supabase.from("pieza").select("id_pieza, nombre"),
+        supabase.from("maquina_molde").select("id_maquina,id_molde"),
         supabase
           .from("lote_materia_prima")
           .select("id_lote, codigo_lote, id_resina"),
-        supabase.from("molde").select("id_molde, codigo_molde"),
+        supabase.from("molde").select("id_molde, codigo_molde").eq("disponible_captura", true).order("codigo_molde"),
         supabase.from("resina").select("id_resina, nombre"),
         supabase.from("causa_scrap").select("id_causa, codigo, nombre"),
       ]);
@@ -90,7 +91,7 @@ export default function RegistrarScrapPage() {
           hourCycle: "h23",
         }).format(new Date()),
       }));
-      if ([m, t, p, l, mo, r, c].some((x) => x.error))
+      if ([m, t, relaciones, l, mo, r, c].some((x) => x.error))
         setMensaje(
           "Error al cargar catálogos. Comprueba la sesión y la conexión.",
         );
@@ -100,9 +101,7 @@ export default function RegistrarScrapPage() {
       setTurnos(
         t.data?.map((x) => ({ id: x.id_turno, nombre: x.nombre })) ?? [],
       );
-      setPiezas(
-        p.data?.map((x) => ({ id: x.id_pieza, nombre: x.nombre })) ?? [],
-      );
+      setRelaciones(relaciones.data ?? []);
       setLotes(l.data ?? []);
       setMoldes(mo.data ?? []);
       setResinas(
@@ -121,7 +120,7 @@ export default function RegistrarScrapPage() {
     if (campo === "resina" || campo === "lote") {
       setAvisoLote(limpiarLote ? "La resina cambió: selecciona un lote que corresponda a esta resina." : "");
     }
-    setForm((prev) => cambiarCampoScrap(prev, campo, valor, lotes));
+    setForm((prev) => ({ ...cambiarCampoScrap(prev, campo, valor, lotes), ...(campo === "maquina" ? { molde: "" } : {}) }));
   }
 
   async function registrarScrap() {
@@ -150,11 +149,10 @@ export default function RegistrarScrapPage() {
     setEnviando(true);
     solicitud.current ??= crypto.randomUUID();
     try {
-      const { data, error } = await supabase.rpc("guardar_captura", {
+      const { data, error } = await supabase.rpc("guardar_captura_molde", {
         p_fecha: form.fecha,
         p_maquina: Number(form.maquina),
         p_turno: Number(datos.turno),
-        p_pieza: Number(form.pieza),
         p_lote: Number(form.lote),
         p_molde: Number(form.molde),
         p_resina: Number(form.resina),
@@ -279,25 +277,6 @@ export default function RegistrarScrapPage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Pieza / producto</Label>
-            <Select
-              value={form.pieza}
-              onValueChange={(v) => actualizarCampo("pieza", v)}
-            >
-              <SelectTrigger {...atributos("pieza")} aria-label="Pieza / producto">
-                <SelectValue placeholder="Seleccionar producto" />
-              </SelectTrigger>
-              <SelectContent>
-                {piezas.map((p) => (
-                  <SelectItem key={p.id} value={String(p.id)}>
-                    {p.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label>Lote</Label>
             <Select
               value={form.lote}
@@ -328,16 +307,16 @@ export default function RegistrarScrapPage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Molde</Label>
+            <Label>Molde / # de parte</Label>
             <Select
               value={form.molde}
               onValueChange={(v) => actualizarCampo("molde", v)}
             >
               <SelectTrigger {...atributos("molde")} aria-label="Molde">
-                <SelectValue placeholder="Seleccionar molde" />
+                <SelectValue placeholder={form.maquina ? "Seleccionar molde" : "Selecciona primero la máquina"} />
               </SelectTrigger>
               <SelectContent>
-                {moldes.map((m) => (
+                {moldes.filter((m) => moldePermitido(form.maquina, m.id_molde, relaciones)).map((m) => (
                   <SelectItem key={m.id_molde} value={String(m.id_molde)}>
                     {m.codigo_molde}
                   </SelectItem>

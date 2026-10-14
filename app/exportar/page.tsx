@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { exportarScrapExcel } from '@/lib/exportarScrap'
+import { Access } from '@/components/session'
 
 function fechaLocal(d: Date) {
   const mm = String(d.getMonth() + 1).padStart(2, '0')
@@ -13,6 +14,10 @@ function fechaLocal(d: Date) {
 }
 
 export default function ExportarPage() {
+  return <Access><FormularioExportacion /></Access>
+}
+
+function FormularioExportacion() {
   const hoy = new Date()
   const haceSieteDias = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000)
 
@@ -47,7 +52,7 @@ export default function ExportarPage() {
     <div className="max-w-md mx-auto p-6 space-y-4">
       <h1 className="text-xl font-bold">Exportar a Excel</h1>
       <p className="text-sm text-muted-foreground">
-        Registros de scrap con máquina, turno, pieza, lote, resina, molde y causa, para auditoría.
+        Registros de scrap con máquina, turno, molde, lote, resina y causa (cantidades en piezas), para auditoría.
       </p>
 
       <div className="space-y-2">
