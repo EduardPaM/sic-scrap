@@ -8,7 +8,7 @@ Entorno verificado: Node 24.21.0, npm 11.19, Next.js 16.3.8. Instalar con `npm c
 
 - `npm run dev`: http://localhost:3000
 - `npm run lint`: análisis estático.
-- `npm test`: 8 pruebas de formulario y 66 comprobaciones en PostgreSQL aislado (PGlite), sin tocar Supabase.
+- `npm test`: 15 pruebas de formulario y 66 comprobaciones en PostgreSQL aislado (PGlite), sin tocar Supabase.
 - `npm run build`: compilación de producción.
 - `npm audit --omit=dev`: dependencias de ejecución. Revisar también auditoría completa de herramientas; no aplicar `--force` sin evaluar incompatibilidades.
 
@@ -60,3 +60,5 @@ La fotografía incorpora 12 relaciones entre 8 máquinas y 12 referencias de mol
 TRS = piezas OK / (objetivo de piezas por hora × horas programadas) × 100. La meta mínima confirmada es 86%; 86 exacto cumple, menor a 86 alerta, evaluado sin redondear. El panel suma objetivos una vez por registro y calcula un cociente ponderado por máquina/turno, nunca promedio de porcentajes. Mientras haya registros abiertos, producción incompleta u objetivos faltantes, muestra TRS pendiente. La alerta de scrap >3% se conserva como regla independiente.
 
 Excel incluye Detalle scrap, Por hora, TRS por registro e Info. La exportación de César integrada por Ana se conserva; la trazabilidad usa el molde canónico y la producción horaria derivada de los detalles. Se añadió el enlace de exportación a la navegación.
+
+En captura y apertura se puede elegir primero máquina o molde. Una relación única completa automáticamente el otro campo; varias relaciones mantienen una elección compatible o solicitan elegir sin asumir la primera. Las cantidades y observaciones se conservan al cambiar la selección. Las relaciones de la imagen y las históricas se validan también en la base de datos.

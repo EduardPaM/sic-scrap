@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { moldePermitido, type RelacionMolde } from "@/lib/moldes";
+import { moldePermitido, enlazarMaquinaMolde, type RelacionMolde } from "@/lib/moldes";
 type Option = { id: number; nombre: string };
 export function AbrirProduccion({ onOpen }: { onOpen: (id: number) => void }) {
   const [catalogos, setCatalogos] = useState<Record<string, Option[]>>({});
@@ -76,6 +76,8 @@ export function AbrirProduccion({ onOpen }: { onOpen: (id: number) => void }) {
       <p className="hint">
         Permite registrar horas con cero scrap. Si el registro ya existe, se
         reutiliza.
+        {" "}Puedes elegir primero máquina o molde: el otro se completa cuando
+        tiene una sola relación. Si tiene varias, selecciona la combinación utilizada.
       </p>
       <form className="form-grid" onSubmit={submit}>
         <label>
@@ -93,7 +95,9 @@ export function AbrirProduccion({ onOpen }: { onOpen: (id: number) => void }) {
             <select
               required
               value={values[key] ?? ""}
-              onChange={(e) => setValues({ ...values, [key]: e.target.value, ...(key === "maquina" ? { molde: "" } : {}) })}
+              onChange={(e) => setValues((prev) => key === "maquina" || key === "molde"
+                ? enlazarMaquinaMolde(prev, key, e.target.value, relaciones)
+                : { ...prev, [key]: e.target.value })}
             >
               <option value="">Seleccionar</option>
               {catalogos[key]?.filter((o) => key !== "molde" || moldePermitido(values.maquina, o.id, relaciones)).map((o) => (

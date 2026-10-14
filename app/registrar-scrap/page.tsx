@@ -17,7 +17,7 @@ import {
 import { Access, useSession } from "@/components/session";
 import { camposScrap as campos, camposFaltantes, cambiarCampoScrap, type CampoScrap, type FormScrap } from "@/lib/scrap-form";
 
-import { moldePermitido, type RelacionMolde } from "@/lib/moldes";
+import { moldePermitido, enlazarMaquinaMolde, type RelacionMolde } from "@/lib/moldes";
 
 type Catalogo = { id: number; nombre: string };
 
@@ -120,7 +120,9 @@ export default function RegistrarScrapPage() {
     if (campo === "resina" || campo === "lote") {
       setAvisoLote(limpiarLote ? "La resina cambió: selecciona un lote que corresponda a esta resina." : "");
     }
-    setForm((prev) => ({ ...cambiarCampoScrap(prev, campo, valor, lotes), ...(campo === "maquina" ? { molde: "" } : {}) }));
+    setForm((prev) => campo === "maquina" || campo === "molde"
+      ? enlazarMaquinaMolde(prev, campo, valor, relaciones)
+      : cambiarCampoScrap(prev, campo, valor, lotes));
   }
 
   async function registrarScrap() {
@@ -236,6 +238,12 @@ export default function RegistrarScrapPage() {
           <p className="text-sm text-muted-foreground">
             Todos los campos son obligatorios excepto Observaciones.
           </p>
+          <p className="hint" id="ayuda-maquina-molde">
+            Puedes comenzar por máquina o por molde. Si hay una sola relación,
+            el otro campo se completa automáticamente. Si hay varias, elige la
+            combinación que estás utilizando. Cambiar de máquina conserva el
+            molde solo cuando corresponde.
+          </p>
 
           <div className="space-y-2">
             <Label>Máquina</Label>
@@ -313,7 +321,7 @@ export default function RegistrarScrapPage() {
               onValueChange={(v) => actualizarCampo("molde", v)}
             >
               <SelectTrigger {...atributos("molde")} aria-label="Molde">
-                <SelectValue placeholder={form.maquina ? "Seleccionar molde" : "Selecciona primero la máquina"} />
+                <SelectValue placeholder="Seleccionar molde" />
               </SelectTrigger>
               <SelectContent>
                 {moldes.filter((m) => moldePermitido(form.maquina, m.id_molde, relaciones)).map((m) => (
