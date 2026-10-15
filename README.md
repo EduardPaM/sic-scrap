@@ -8,7 +8,7 @@ Entorno verificado: Node 24.21.0, npm 11.19, Next.js 16.3.8. Instalar con `npm c
 
 - `npm run dev`: http://localhost:3000
 - `npm run lint`: análisis estático.
-- `npm test`: 15 pruebas de formulario, 5 de gráficas y 66 comprobaciones en PostgreSQL aislado (PGlite), sin tocar Supabase.
+- `npm test`: 15 pruebas de formulario, 5 de gráficas, 3 de paginación y 92 comprobaciones en PostgreSQL aislado (PGlite), sin tocar Supabase.
 - `npm run build`: compilación de producción.
 - `npm audit --omit=dev`: dependencias de ejecución. Revisar también auditoría completa de herramientas; no aplicar `--force` sin evaluar incompatibilidades.
 
@@ -41,13 +41,19 @@ Scrap (%) = suma de rechazos / suma de piezas inyectadas × 100. No promediar po
 
 La fecha es la de inicio del turno y la hora usa reloj 0–23. Se conserva compatibilidad con los registros históricos. Las capturas se agrupan por fecha/máquina/turno/molde/lote; el UUID de solicitud hace idempotente el reintento. Capturar producción reemplaza el total horario, no lo incrementa. Un registro cerrado bloquea cambios desde las RPC.
 
-Alertas derivadas reflejan el estado actual y no constituyen un historial de notificaciones. El panel consulta cada 15 s; al guardar scrap se consulta de inmediato el estado disponible. Si falta producción, no se puede calcular todavía el porcentaje.
+Las alertas del panel reflejan el estado actual. `/alertas` conserva sus cambios de estado y porcentaje desde la instalación de la migración 202610140002; no reconstruye eventos anteriores. El panel consulta cada 15 s; al guardar scrap se consulta de inmediato el estado disponible. Si falta producción, no se puede calcular todavía el porcentaje.
 
 ## Límites y pendientes
 
-El cierre es por registro de molde/lote, no un cierre global de máquina/turno. El panel limita la consulta a 1,000 grupos y advierte cuando alcanza el límite; el selector de cierre a 500 registros. Las escrituras usan un bloqueo transaccional global para evitar encabezados duplicados; medir concurrencia antes de escalar a varias líneas. No se migraron ni borraron duplicados históricos.
+El cierre es por registro de molde/lote, no un cierre global de máquina/turno. Panel, selector de cierre, gráficas, historial y exportación leen por páginas; las consultas que alcanzan 100,000 filas solicitan reducir el rango sin devolver resultados parciales. Las escrituras usan un bloqueo transaccional global para evitar encabezados duplicados; medir concurrencia antes de escalar a varias líneas. No se fusionaron ni borraron duplicados históricos.
 
-Faltan validaciones operativas con cuentas reales de todos los roles, edición de umbrales e historial de alertas. No hay una interfaz de reapertura ni de corrección de detalle scrap. Los números manuscritos de las fotos son evidencia por confirmar y no se cargan automáticamente.
+Las pruebas con películas reales están diferidas por Eduardo; la matriz de permisos se prueba con cinco identidades aisladas. Los umbrales son las reglas aprobadas (3% scrap, 86% TRS), no valores editables. No hay una interfaz de reapertura ni de corrección de detalle scrap. Los números manuscritos de las fotos son evidencia por confirmar y no se cargan automáticamente.
+
+## Demostración y entrega
+
+Aplicar `202610140002_demo_alertas.sql`, publicar el cliente y después cargar `supabase/demo/20261014_demostracion.sql`. El script repetible añade 30 registros hipotéticos cerrados del 5 al 14 de octubre de 2026, 30,000 piezas y 1,365 rechazos. Usa máquinas y lote DEMO separados; una validación de base impide cruzarlos con producción real. Los filtros muestran Producción real por defecto. Para presentar, elegir Demostración en Panel, Gráficas, Historial y Exportar. El Excel identifica su origen por fila y en el nombre del archivo. Captura y apertura también separan catálogos y relaciones por origen.
+
+Consultar `docs/CIERRE-TECNICO-Y-DEMO.md` para guion, matriz de aceptación, permisos, diccionario actualizado y material de Review/retrospectiva. Las reuniones, reflexiones personales, aceptación con planta y documento final requieren al equipo; no se acreditan mediante pruebas automáticas.
 
 ## Moldes y TRS (14-oct-2026)
 

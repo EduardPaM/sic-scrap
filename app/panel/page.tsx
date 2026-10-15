@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Access, useSession } from "@/components/session";
+import { SelectorOrigen } from '@/components/origen-datos';
+import { maquinasOrigen, type OrigenDatos } from '@/lib/origen-datos';
+import { leerPaginas } from '@/lib/paginacion';
 type KPI = {
   fecha: string;
   id_maquina: number;
@@ -33,6 +36,7 @@ export default function Panel() {
 }
 function Dashboard() {
   const { perfil } = useSession();
+  const [origen, setOrigen] = useState<OrigenDatos>('real');
   const [date, setDate] = useState("");
   const [machine, setMachine] = useState("");
   const [rows, setRows] = useState<KPI[]>([]);
@@ -42,27 +46,27 @@ function Dashboard() {
   const request = useRef({ generation: 0 });
   const load = useCallback(async () => {
     const current = ++request.current.generation;
+    try {
+    const equipos = await maquinasOrigen(origen);
+    if (current !== request.current.generation) return;
+    if (!equipos.length) { setRows([]); setMessage('No hay máquinas para este origen.'); setLoading(false); return; }
     let q = supabase
       .from("v_panel_turno")
       .select("*")
-      .order("fecha", { ascending: false });
+      .in('id_maquina', equipos.map(m => m.id_maquina))
+      .order("fecha", { ascending: false }).order('id_maquina').order('id_turno');
     q = date ? q.eq("fecha", date) : q.gte("fecha", hace30Dias());
-    const { data, error } = await q.limit(1000);
+    const data = await leerPaginas<KPI>((a,b) => q.range(a,b));
     if (current !== request.current.generation) return;
-    if (error) {
-      setMessage(`No se pudo consultar el panel: ${error.message}`);
-      setRows([]);
-    } else {
       setRows(data ?? []);
-      setMessage(
-        (data?.length ?? 0) >= 1000
-          ? "Se muestran hasta 1,000 grupos. Filtra una fecha para acotar los resultados."
-          : "",
-      );
+      setMessage('');
       setUpdated(new Date().toLocaleTimeString("es-MX"));
+    } catch(e) {
+      if (current !== request.current.generation) return;
+      setRows([]); setMessage(e instanceof Error ? e.message : 'No se pudo consultar el panel.');
     }
     setLoading(false);
-  }, [date]);
+  }, [date, origen]);
   useEffect(() => {
     const tracker = request.current;
     const initial = setTimeout(() => void load(), 0);
@@ -100,6 +104,7 @@ function Dashboard() {
         </button>
       </div>
       <div className="surface filters">
+        <SelectorOrigen value={origen} onChange={v => { setOrigen(v); setMachine(''); setRows([]); }} />
         <label>
           Fecha del turno
           <input

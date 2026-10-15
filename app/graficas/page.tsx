@@ -13,7 +13,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { supabase } from "@/lib/supabaseClient";
+import { maquinasOrigen, type OrigenDatos } from '@/lib/origen-datos';
+import { SelectorOrigen } from '@/components/origen-datos';
 import { Access } from "@/components/session";
 import {
   cargarGraficas,
@@ -45,6 +46,7 @@ export default function Graficas() {
 }
 
 function Contenido() {
+  const [origen, setOrigen] = useState<OrigenDatos>('real');
   const [desde, setDesde] = useState(() => fechaMx(30 * 24 * 60 * 60 * 1000));
   const [hasta, setHasta] = useState(() => fechaMx(0));
   const [maquina, setMaquina] = useState("");
@@ -57,12 +59,10 @@ function Contenido() {
   const peticion = useRef(0);
 
   useEffect(() => {
-    void supabase
-      .from("maquina")
-      .select("id_maquina,nombre")
-      .order("nombre")
-      .then(({ data }) => setMaquinas(data ?? []));
-  }, []);
+    let vivo = true;
+    void maquinasOrigen(origen).then(data => { if (vivo) setMaquinas(data); }).catch(e => { if(vivo) setMensaje(String(e)); });
+    return () => { vivo = false; };
+  }, [origen]);
 
   const cargar = useCallback(async () => {
     if (!desde || !hasta || desde > hasta) {
@@ -72,7 +72,7 @@ function Contenido() {
     const actual = ++peticion.current;
     setCargando(true);
     try {
-      const r = await cargarGraficas(desde, hasta, maquina);
+      const r = await cargarGraficas(desde, hasta, maquina, origen);
       if (actual !== peticion.current) return;
       setDias(r.dias);
       setCausas(r.causas);
@@ -80,11 +80,12 @@ function Contenido() {
       setMensaje("");
     } catch (e) {
       if (actual !== peticion.current) return;
+      setDias([]); setCausas([]); setSinDato(0);
       setMensaje(e instanceof Error ? e.message : "No se pudieron cargar las gráficas.");
     } finally {
       if (actual === peticion.current) setCargando(false);
     }
-  }, [desde, hasta, maquina]);
+  }, [desde, hasta, maquina, origen]);
 
   useEffect(() => {
     const t = setTimeout(() => void cargar(), 0);
@@ -108,6 +109,7 @@ function Contenido() {
       </div>
 
       <div className="surface filters">
+        <SelectorOrigen value={origen} onChange={v => { setOrigen(v); setMaquina(''); setDias([]); setCausas([]); }} />
         <label>
           Desde
           <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
@@ -127,7 +129,7 @@ function Contenido() {
             ))}
           </select>
         </label>
-        <p className="hint">{cargando ? "Consultando…" : "Datos de la base oficial"}</p>
+        <p className="hint">{cargando ? "Consultando…" : origen === 'demo' ? 'Datos hipotéticos de demostración' : 'Datos de producción real'}</p>
       </div>
 
       {mensaje && (

@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/select";
 
 import { Access, useSession } from "@/components/session";
+import { SelectorOrigen } from '@/components/origen-datos';
+import type { OrigenDatos } from '@/lib/origen-datos';
 import { camposScrap as campos, camposFaltantes, cambiarCampoScrap, type CampoScrap, type FormScrap } from "@/lib/scrap-form";
 
 import { moldePermitido, enlazarMaquinaMolde, type RelacionMolde } from "@/lib/moldes";
@@ -22,6 +24,7 @@ import { moldePermitido, enlazarMaquinaMolde, type RelacionMolde } from "@/lib/m
 type Catalogo = { id: number; nombre: string };
 
 export default function RegistrarScrapPage() {
+  const [origen, setOrigen] = useState<OrigenDatos>('real');
   const [maquinas, setMaquinas] = useState<Catalogo[]>([]);
   const [turnos, setTurnos] = useState<Catalogo[]>([]);
   const [relaciones, setRelaciones] = useState<RelacionMolde[]>([]);
@@ -68,18 +71,20 @@ export default function RegistrarScrapPage() {
   }
 
   useEffect(() => {
+    let vivo = true;
     async function cargarCatalogos() {
       const [m, t, relaciones, l, mo, r, c] = await Promise.all([
-        supabase.from("maquina").select("id_maquina, nombre"),
+        supabase.from("maquina").select("id_maquina, nombre").eq('es_demo', origen === 'demo'),
         supabase.from("turno").select("id_turno, nombre"),
         supabase.from("maquina_molde").select("id_maquina,id_molde"),
         supabase
           .from("lote_materia_prima")
-          .select("id_lote, codigo_lote, id_resina"),
+          .select("id_lote, codigo_lote, id_resina").eq('es_demo', origen === 'demo'),
         supabase.from("molde").select("id_molde, codigo_molde").eq("disponible_captura", true).order("codigo_molde"),
         supabase.from("resina").select("id_resina, nombre"),
         supabase.from("causa_scrap").select("id_causa, codigo, nombre"),
       ]);
+      if (!vivo) return;
       setForm((prev) => ({
         ...prev,
         fecha: new Intl.DateTimeFormat("en-CA", {
@@ -101,7 +106,7 @@ export default function RegistrarScrapPage() {
       setTurnos(
         t.data?.map((x) => ({ id: x.id_turno, nombre: x.nombre })) ?? [],
       );
-      setRelaciones(relaciones.data ?? []);
+      setRelaciones((relaciones.data ?? []).filter(r => m.data?.some(x => x.id_maquina === r.id_maquina)));
       setLotes(l.data ?? []);
       setMoldes(mo.data ?? []);
       setResinas(
@@ -110,7 +115,8 @@ export default function RegistrarScrapPage() {
       setCausas(c.data ?? []);
     }
     cargarCatalogos();
-  }, []);
+    return () => { vivo = false; };
+  }, [origen]);
 
   function actualizarCampo(campo: keyof FormScrap, valor: string) {
     solicitud.current = null;
@@ -209,6 +215,7 @@ export default function RegistrarScrapPage() {
         <fieldset disabled={enviando} className="surface space-y-4">
           <p className="eyebrow">CAPTURA DE PLANTA</p>
           <h1>Registrar scrap</h1>
+          <SelectorOrigen value={origen} onChange={v => { setOrigen(v); setForm(p=>({...p,maquina:'',molde:'',lote:'',resina:''})); setMaquinas([]); setLotes([]); setRelaciones([]); solicitud.current=null; setMensaje(null); }} />
           <div className="form-grid">
             <label>
               Fecha de inicio del turno

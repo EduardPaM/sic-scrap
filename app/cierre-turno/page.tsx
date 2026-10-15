@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { AbrirProduccion } from "@/components/abrir-produccion";
 import { Access } from "@/components/session";
+import { leerPaginas } from '@/lib/paginacion';
 type Registro = {
   id_registro: number;
   fecha: string;
@@ -50,15 +51,14 @@ function Formulario() {
         molde: Object.fromEntries((p.data ?? []).map((r) => [r.id_molde, r.codigo_molde])),
       }),
     );
-    supabase
+    leerPaginas<Registro>((a,b) => supabase
       .from("registro_produccion")
       .select("id_registro,fecha,id_maquina,id_turno,id_molde,cerrado_en")
-      .order("fecha", { ascending: false })
-      .limit(500)
-      .then(({ data, error }) => {
+      .order("fecha", { ascending: false }).order('id_registro')
+      .range(a,b))
+      .then(data => {
         setRegistros(data ?? []);
-        if (error) setMessage(error.message);
-      });
+      }).catch(e => setMessage(e instanceof Error ? e.message : 'No se pudieron cargar los registros.'));
   }, []);
   async function refresh(value: string) {
     const { data, error } = await supabase

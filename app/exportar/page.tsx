@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { exportarScrapExcel } from '@/lib/exportarScrap'
 import { Access } from '@/components/session'
+import { SelectorOrigen } from '@/components/origen-datos'
+import type { OrigenDatos } from '@/lib/origen-datos'
 
 function fechaLocal(d: Date) {
   const mm = String(d.getMonth() + 1).padStart(2, '0')
@@ -18,6 +20,7 @@ export default function ExportarPage() {
 }
 
 function FormularioExportacion() {
+  const [origen, setOrigen] = useState<OrigenDatos>('real')
   const hoy = new Date()
   const haceSieteDias = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000)
 
@@ -39,7 +42,7 @@ function FormularioExportacion() {
 
     setExportando(true)
     try {
-      const r = await exportarScrapExcel(desde, hasta)
+      const r = await exportarScrapExcel(desde, hasta, origen)
       setMensaje(`✓ Descargado ${r.archivo} — ${r.filasDetalle} registros de scrap, ${r.filasHora} horas de producción`)
     } catch (e) {
       setMensaje(`Error: ${e instanceof Error ? e.message : 'no se pudo exportar.'}`)
@@ -56,6 +59,7 @@ function FormularioExportacion() {
       </p>
 
       <div className="space-y-2">
+        <SelectorOrigen value={origen} onChange={v => { setOrigen(v); setMensaje(null); }} disabled={exportando} />
         <Label htmlFor="desde">Desde</Label>
         <Input id="desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
       </div>

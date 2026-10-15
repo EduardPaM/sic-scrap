@@ -2,8 +2,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { moldePermitido, enlazarMaquinaMolde, type RelacionMolde } from "@/lib/moldes";
+import { SelectorOrigen } from './origen-datos';
+import type { OrigenDatos } from '@/lib/origen-datos';
 type Option = { id: number; nombre: string };
 export function AbrirProduccion({ onOpen }: { onOpen: (id: number) => void }) {
+  const [origen, setOrigen] = useState<OrigenDatos>('real');
   const [catalogos, setCatalogos] = useState<Record<string, Option[]>>({});
   const [values, setValues] = useState<Record<string, string>>({});
   const [relaciones, setRelaciones] = useState<RelacionMolde[]>([]);
@@ -16,19 +19,21 @@ export function AbrirProduccion({ onOpen }: { onOpen: (id: number) => void }) {
     ["molde", "Molde"],
   ];
   useEffect(() => {
+    let vivo = true;
     async function load() {
       const [m, t, relaciones, l, mo] = await Promise.all([
-        supabase.from("maquina").select("id_maquina,nombre"),
+        supabase.from("maquina").select("id_maquina,nombre").eq('es_demo', origen === 'demo'),
         supabase.from("turno").select("id_turno,nombre"),
         supabase.from("maquina_molde").select("id_maquina,id_molde"),
-        supabase.from("lote_materia_prima").select("id_lote,codigo_lote"),
+        supabase.from("lote_materia_prima").select("id_lote,codigo_lote").eq('es_demo', origen === 'demo'),
         supabase.from("molde").select("id_molde,codigo_molde").eq("disponible_captura", true).order("codigo_molde"),
       ]);
+      if (!vivo) return;
       if ([m, t, relaciones, l, mo].some((r) => r.error)) {
         setError("No se pudieron cargar los catálogos.");
         return;
       }
-      setRelaciones(relaciones.data ?? []);
+      setRelaciones((relaciones.data ?? []).filter(r => m.data?.some(x => x.id_maquina === r.id_maquina)));
       setCatalogos({
         maquina: (m.data ?? []).map((r) => ({
           id: r.id_maquina,
@@ -49,7 +54,8 @@ export function AbrirProduccion({ onOpen }: { onOpen: (id: number) => void }) {
       });
     }
     void load();
-  }, []);
+    return () => { vivo = false; };
+  }, [origen]);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -73,6 +79,7 @@ export function AbrirProduccion({ onOpen }: { onOpen: (id: number) => void }) {
   return (
     <details className="surface">
       <summary>Abrir producción de un molde y lote</summary>
+      <SelectorOrigen value={origen} disabled={busy} onChange={v => { setOrigen(v); setValues({}); setCatalogos({}); setRelaciones([]); }} />
       <p className="hint">
         Permite registrar horas con cero scrap. Si el registro ya existe, se
         reutiliza.

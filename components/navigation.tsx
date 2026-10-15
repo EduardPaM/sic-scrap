@@ -10,6 +10,7 @@ export function Navigation() {
   const links = [
     ["/panel", "Panel"],
     ["/graficas", "Gráficas"],
+    ["/alertas", "Historial de alertas"],
     ["/exportar", "Exportar"],
     ...(rol === "administrador" ? [["/usuarios", "Usuarios"]] : []),
     ...(rol === "operador" ? [["/registrar-scrap", "Capturar scrap"]] : []),

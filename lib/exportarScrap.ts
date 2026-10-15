@@ -4,6 +4,8 @@
 // de los nombres de las llaves foráneas en PostgREST.
 
 import { supabase } from '@/lib/supabaseClient'
+import { leerPaginas } from './paginacion'
+import { maquinasOrigen, type OrigenDatos } from './origen-datos'
 
 type Fila = Record<string, string | number>
 
@@ -19,16 +21,16 @@ async function consultarPorIds<T>(
   const resultado: T[] = []
   for (let i = 0; i < ids.length; i += TAM_BLOQUE) {
     const bloque = ids.slice(i, i + TAM_BLOQUE)
-    const { data, error } = await supabase.from(tabla).select(columnas).in(campo, bloque)
-    if (error) throw new Error(`Error al leer ${tabla}: ${error.message}`)
+    const clave = tabla === 'detalle_scrap' ? 'id_detalle_scrap' : tabla === 'v_produccion_hora' ? 'id_produccion_hora' : 'id_registro'
+    const data = await leerPaginas((a,b) => supabase.from(tabla).select(columnas).in(campo, bloque).order(clave).range(a,b))
     resultado.push(...((data ?? []) as T[]))
   }
   return resultado
 }
 
 async function consultarTodo<T>(tabla: string, columnas: string): Promise<T[]> {
-  const { data, error } = await supabase.from(tabla).select(columnas)
-  if (error) throw new Error(`Error al leer ${tabla}: ${error.message}`)
+  const clave = columnas.split(',')[0].trim()
+  const data = await leerPaginas((a,b) => supabase.from(tabla).select(columnas).order(clave).range(a,b))
   return (data ?? []) as T[]
 }
 
@@ -64,15 +66,17 @@ export function porcentajeScrap(inyectadas: number, scrap: number): number | nul
   return Math.round((scrap / inyectadas) * 10000) / 100
 }
 
-export async function exportarScrapExcel(desde: string, hasta: string): Promise<ResultadoExportacion> {
+export async function exportarScrapExcel(desde: string, hasta: string, origen: OrigenDatos = 'real'): Promise<ResultadoExportacion> {
+  const equipos = await maquinasOrigen(origen)
+  if (!equipos.length) throw new Error('No hay máquinas para el origen seleccionado.')
   // 1) Registros de producción dentro del rango de fechas
-  const { data: regData, error: regError } = await supabase
+  const regData = await leerPaginas<Registro>((a,b) => supabase
     .from('registro_produccion')
     .select('id_registro, fecha, id_maquina, id_molde, id_lote, id_turno, id_operador')
+    .in('id_maquina', equipos.map(m => m.id_maquina))
     .gte('fecha', desde)
     .lte('fecha', hasta)
-    .order('fecha', { ascending: true })
-  if (regError) throw new Error(`Error al leer registro_produccion: ${regError.message}`)
+    .order('fecha', { ascending: true }).order('id_registro').range(a,b))
   const registros = (regData ?? []) as Registro[]
   if (registros.length === 0) throw new Error('No hay registros en ese rango de fechas.')
 
@@ -113,6 +117,7 @@ export async function exportarScrapExcel(desde: string, hasta: string): Promise<
     const lote = r.id_lote != null ? mLote.get(r.id_lote) : undefined
     const resina = lote?.id_resina != null ? mResina.get(lote.id_resina) : undefined
     return {
+      'Origen': origen === 'demo' ? 'DEMOSTRACIÓN HIPOTÉTICA' : 'Producción real',
       'ID registro': r.id_registro,
       'Fecha': r.fecha,
       'Turno': r.id_turno != null ? mTurno.get(r.id_turno)?.nombre ?? '' : '',
@@ -177,6 +182,7 @@ export async function exportarScrapExcel(desde: string, hasta: string): Promise<
   hojaTrs.sort(ordenar)
 
   const hojaInfo = [
+    { 'Campo': 'Origen', 'Valor': origen === 'demo' ? 'DEMOSTRACIÓN: datos hipotéticos, no resultados de planta' : 'Producción real' },
     { 'Campo': 'Sistema', 'Valor': 'SIC SCRAP · Trazabilidad de scrap' },
     { 'Campo': 'Rango de fechas', 'Valor': `${desde} a ${hasta}` },
     { 'Campo': 'Generado', 'Valor': new Date().toLocaleString('es-MX') },
@@ -204,7 +210,7 @@ export async function exportarScrapExcel(desde: string, hasta: string): Promise<
   agregar(hojaTrs, 'TRS por registro')
   agregar(hojaInfo, 'Info')
 
-  const archivo = `SIC_SCRAP_${desde}_a_${hasta}.xlsx`
+  const archivo = `SIC_SCRAP_${origen === 'demo' ? 'DEMO_' : ''}${desde}_a_${hasta}.xlsx`
   XLSX.writeFile(libro, archivo)
 
   return { filasDetalle: hojaDetalle.length, filasHora: hojaHora.length, archivo }
