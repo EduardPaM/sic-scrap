@@ -32,8 +32,6 @@ function Formulario() {
   const [horas, setHoras] = useState<Hora[]>([]);
   const [hora, setHora] = useState("");
   const [iny, setIny] = useState("");
-  const [objetivo, setObjetivo] = useState("");
-  const [programadas, setProgramadas] = useState("");
   const [ok, setOk] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -95,10 +93,8 @@ function Formulario() {
     setBusy(true);
     setMessage("");
     try {
-      const { error } = await supabase.rpc("cerrar_registro", {
+      const { error } = await supabase.rpc("cerrar_registro_scrap", {
         p_registro: Number(id),
-        p_objetivo: Number(objetivo),
-        p_horas: Number(programadas),
         p_ok: Number(ok),
       });
       if (error) setMessage(error.message);
@@ -199,6 +195,7 @@ function Formulario() {
         <label>
           Hora del reloj
           <input
+            disabled={busy || !id || closed}
             type="number"
             required
             min="0"
@@ -211,6 +208,7 @@ function Formulario() {
         <label>
           Total inyectado en esa hora
           <input
+            disabled={busy || !id || closed}
             type="number"
             required
             min="0"
@@ -233,6 +231,7 @@ function Formulario() {
         <label>
           Piezas OK del registro
           <input
+            disabled={busy || !id || closed}
             required
             type="number"
             min="0"
@@ -241,33 +240,9 @@ function Formulario() {
             onChange={(e) => setOk(e.target.value)}
           />
         </label>
-        <label>
-          Objetivo de piezas por hora
-          <input
-            required
-            type="number"
-            min="0.01"
-            max="9999999999"
-            step="0.01"
-            value={objetivo}
-            onChange={(e) => setObjetivo(e.target.value)}
-          />
-        </label>
-        <label>
-          Horas programadas
-          <input
-            required
-            type="number"
-            min="0.01"
-            max="24"
-            step="0.01"
-            value={programadas}
-            onChange={(e) => setProgramadas(e.target.value)}
-          />
-        </label>
         <p className="hint">
           El cierre se realiza por registro de molde y lote. Las piezas OK deben
-          coincidir con la producción horaria. TRS = piezas OK ÷ (objetivo por hora × horas programadas) × 100. Meta mínima: 86%. El resultado definitivo aparece en el panel al cerrar todos los registros del grupo.
+          coincidir con las piezas inyectadas menos el scrap.
         </p>
         <button className="primary full" disabled={busy || !id || closed}>
           {closed ? "Registro cerrado" : "Guardar cierre"}

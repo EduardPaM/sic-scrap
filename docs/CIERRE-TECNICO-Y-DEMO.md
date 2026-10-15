@@ -1,3 +1,5 @@
+> Documento histórico de la versión con TRS. Para el alcance vigente y la retirada autorizada, consultar [RETIRADA-TRS.md](RETIRADA-TRS.md).
+
 # SIC SCRAP: demostración y cierre técnico
 
 Fecha de corte: 14 de octubre de 2026. Alcance: prototipo funcional con datos hipotéticos, por instrucción de Eduardo. Las películas reales se validarán después. Este archivo es un anexo técnico y material de preparación; no sustituye el documento final de ocho fases ni acredita reuniones o aprobaciones que no se hayan realizado.

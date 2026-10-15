@@ -52,7 +52,6 @@ type Detalle = {
 }
 type Lote = { id_lote: number; codigo_lote: string; id_resina: number | null }
 type Causa = { id_causa: number; codigo: string; nombre: string; categoria: string }
-type Trs = { id_registro: number; piezas_objetivo: number | null; piezas_ok: number; pct_trs: number | null; alerta_trs: boolean }
 
 export type ResultadoExportacion = { filasDetalle: number; filasHora: number; archivo: string }
 
@@ -171,23 +170,12 @@ export async function exportarScrapExcel(desde: string, hasta: string, origen: O
   hojaDetalle.sort(ordenar)
   hojaHora.sort(ordenar)
 
-  const resultadosTrs = await consultarPorIds<Trs>('v_trs_registro',
-    'id_registro,piezas_objetivo,piezas_ok,pct_trs,alerta_trs', 'id_registro', idsRegistro)
-  const hojaTrs: Fila[] = resultadosTrs.flatMap(t => {
-    const r = mRegistro.get(t.id_registro)
-    return r ? [{ ...trazabilidad(r), 'Piezas objetivo': t.piezas_objetivo ?? '',
-      'Piezas OK': t.piezas_ok, 'TRS (%)': t.pct_trs ?? 'Pendiente de cierre',
-      'Meta TRS (%)': 86, 'Estado TRS': t.pct_trs === null ? 'Pendiente de cierre' : t.alerta_trs ? 'Bajo meta' : 'Meta cumplida' }] : []
-  })
-  hojaTrs.sort(ordenar)
-
   const hojaInfo = [
     { 'Campo': 'Origen', 'Valor': origen === 'demo' ? 'DEMOSTRACIÓN: datos hipotéticos, no resultados de planta' : 'Producción real' },
     { 'Campo': 'Sistema', 'Valor': 'SIC SCRAP · Trazabilidad de scrap' },
     { 'Campo': 'Rango de fechas', 'Valor': `${desde} a ${hasta}` },
     { 'Campo': 'Generado', 'Valor': new Date().toLocaleString('es-MX') },
     { 'Campo': 'Unidad de scrap', 'Valor': 'Piezas (no kg)' },
-    { 'Campo': 'TRS', 'Valor': 'Piezas OK / (objetivo por hora × horas programadas) × 100; mínimo 86%' },
     { 'Campo': 'Fórmula % Scrap', 'Valor': 'Scrap / (OK + Scrap) × 100' },
     { 'Campo': 'Nota', 'Valor': 'El % Scrap solo se calcula cuando hay piezas inyectadas capturadas.' },
     { 'Campo': 'Filas de detalle', 'Valor': String(hojaDetalle.length) },
@@ -207,7 +195,6 @@ export async function exportarScrapExcel(desde: string, hasta: string, origen: O
   }
   agregar(hojaDetalle.length ? hojaDetalle : [{ 'Sin datos': 'No hay detalle de scrap en el rango' }], 'Detalle scrap')
   agregar(hojaHora.length ? hojaHora : [{ 'Sin datos': 'No hay producción por hora en el rango' }], 'Por hora')
-  agregar(hojaTrs, 'TRS por registro')
   agregar(hojaInfo, 'Info')
 
   const archivo = `SIC_SCRAP_${origen === 'demo' ? 'DEMO_' : ''}${desde}_a_${hasta}.xlsx`

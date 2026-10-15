@@ -1,3 +1,5 @@
+> Documento histórico de la versión con TRS. Para el alcance vigente y la retirada autorizada, consultar [RETIRADA-TRS.md](RETIRADA-TRS.md).
+
 # Evidencia de validación del 14 de octubre de 2026
 
 ## Pruebas

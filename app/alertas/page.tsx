@@ -24,14 +24,14 @@ function Historial() {
         if(!desde) throw new Error('Selecciona la fecha inicial.');
         const m = await maquinasOrigen(origen);
         const t = await leerPaginas<{ id_turno:number; nombre:string }>((a,b) => supabase.from('turno').select('id_turno,nombre').order('id_turno').range(a,b));
-        const data = m.length ? await leerPaginas<Alerta>((a,b) => supabase.from('alerta_historial').select('*').in('id_maquina',m.map(x=>x.id_maquina)).gte('fecha',desde).order('id_alerta',{ascending:false}).range(a,b)) : [];
+        const data = m.length ? await leerPaginas<Alerta>((a,b) => supabase.from('alerta_historial').select('*').eq('tipo','scrap').in('id_maquina',m.map(x=>x.id_maquina)).gte('fecha',desde).order('id_alerta',{ascending:false}).range(a,b)) : [];
         if(vivo) { setFilas(data); setEquipos(Object.fromEntries(m.map(x=>[x.id_maquina,x.nombre]))); setTurnos(Object.fromEntries(t.map(x=>[x.id_turno,x.nombre]))); }
       } catch(e) { if(vivo) { setFilas([]); setError(e instanceof Error ? e.message : 'No se pudo cargar el historial.'); } }
       finally { if(vivo) setCargando(false); }
     }
     void cargar(); return () => { vivo=false; };
   },[origen,desde,revision]);
-  return <main className="workspace"><div className="page-title"><div><p className="eyebrow">TRAZABILIDAD</p><h1>Historial de alertas</h1><p className="subtitle">Cambios de estado y porcentaje de scrap y TRS.</p></div><button disabled={cargando} onClick={()=>setRevision(v=>v+1)}>Actualizar</button></div>
+  return <main className="workspace"><div className="page-title"><div><p className="eyebrow">TRAZABILIDAD</p><h1>Historial de alertas</h1><p className="subtitle">Cambios de estado y porcentaje de scrap.</p></div><button disabled={cargando} onClick={()=>setRevision(v=>v+1)}>Actualizar</button></div>
     <div className="surface filters"><SelectorOrigen value={origen} onChange={v=>{setOrigen(v);setFilas([]);}} /><label>Fecha del turno desde<input type="date" value={desde} onChange={e=>setDesde(e.target.value)} /></label></div>
     <p className="hint">El historial comienza al instalar esta función. La hora de registro es la de observación, no la del evento original. «Pendiente» indica datos insuficientes; no significa que la alerta esté resuelta. Consulta las alertas actuales en el Panel.</p>
     {error && <p role="alert" className="notice">{error}</p>}

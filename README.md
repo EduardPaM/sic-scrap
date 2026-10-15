@@ -1,3 +1,5 @@
+> Actualización de alcance: TRS se retira del cliente y del cierre vigente. Aplicar la nueva migración antes de publicar. Ver [Retirada de TRS](docs/RETIRADA-TRS.md).
+
 # SIC SCRAP
 
 Aplicación Next.js + Supabase para captura de rechazos en piezas, producción por hora, cierre por registro y panel por máquina/turno.
