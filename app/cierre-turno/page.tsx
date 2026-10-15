@@ -131,12 +131,12 @@ function Formulario() {
         onOpen={(value) => {
           setId(String(value));
           void refresh(String(value));
-          supabase
+          leerPaginas<Registro>((a,b) => supabase
             .from("registro_produccion")
             .select("id_registro,fecha,id_maquina,id_turno,id_molde,cerrado_en")
-            .order("fecha", { ascending: false })
-            .limit(500)
-            .then(({ data }) => setRegistros(data ?? []));
+            .order("fecha", { ascending: false }).order('id_registro')
+            .range(a,b))
+            .then(data => setRegistros(data)).catch(e => setMessage(e instanceof Error ? e.message : 'No se pudo actualizar la lista.'));
         }}
       />
       <section className="surface form-grid single">
