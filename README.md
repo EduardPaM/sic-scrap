@@ -1,4 +1,4 @@
-> Actualización de alcance: TRS se retira del cliente y del cierre vigente. Aplicar la nueva migración antes de publicar. Ver [Retirada de TRS](docs/RETIRADA-TRS.md).
+> Entrega final: TRS retirado del cliente y del cierre; 86% exclusivamente informativo. Ver [cierre y matriz](docs/CIERRE-PROYECTO-20261016.md), [documento final](docs/INFORME-FINAL.md) y [guion para exposición](docs/GUION-PRESENTACION.md). En otros ambientes aplicar primero la [migración de retirada](docs/RETIRADA-TRS.md).
 
 # SIC SCRAP
 
@@ -10,7 +10,7 @@ Entorno verificado: Node 24.21.0, npm 11.19, Next.js 16.3.8. Instalar con `npm c
 
 - `npm run dev`: http://localhost:3000
 - `npm run lint`: análisis estático.
-- `npm test`: 15 pruebas de formulario, 5 de gráficas, 3 de paginación y 92 comprobaciones en PostgreSQL aislado (PGlite), sin tocar Supabase.
+- `npm test`: 15 pruebas de formulario, 5 de gráficas, 3 de paginación y 104 comprobaciones en PostgreSQL aislado (PGlite), sin tocar Supabase.
 - `npm run build`: compilación de producción.
 - `npm audit --omit=dev`: dependencias de ejecución. Revisar también auditoría completa de herramientas; no aplicar `--force` sin evaluar incompatibilidades.
 

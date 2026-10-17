@@ -140,6 +140,10 @@ function Dashboard() {
           {message}
         </p>
       )}
+      <p className="hint" role="note">
+        Información: el 86% es únicamente una referencia orientativa. No condiciona
+        el cierre de producción ni genera alertas.
+      </p>
       <div className="metrics">
         <article>
           <span>Piezas inyectadas</span>
