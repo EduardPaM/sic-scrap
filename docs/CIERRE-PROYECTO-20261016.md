@@ -21,7 +21,7 @@ Este cierre actualiza el alcance por instrucción del propietario: retirar el TR
 | Correo y recuperación de contraseña | Implementación completada | Entrega de correo confirmada anteriormente. Cambio real de contraseña excluido de este cierre por decisión del propietario. |
 | Exportación Excel | Completado | Detalle scrap, Por hora e Info; filtros y origen de datos. |
 | Datos hipotéticos y pruebas técnicas | Completado | Datos DEMO identificados y 127 comprobaciones automáticas aprobadas. |
-| Control de versiones y publicación | Completado al verificar la versión publicada | GitHub y Vercel; evidencia de publicación registrada al final. |
+| Control de versiones y publicación | Completado | GitHub y Vercel; versión funcional `3ecfb74`, estado Ready y Current en producción. |
 | Material de exposición y cierre técnico | Completado | Guion vigente y este documento. Sustituyen los pendientes técnicos de preparación. |
 | Validación con películas reales / casos de planta | Cerrado por exclusión de alcance | Diferida por el propietario; no se registra como ejecutada ni aceptada. |
 | Review, retrospectiva, reflexiones y ensayo del equipo | Cerrado administrativamente para esta entrega | No hay evidencia para declararlos realizados; corresponden al equipo. |
@@ -44,6 +44,8 @@ Se ejecutaron 23 pruebas de formulario/cálculos/paginación y 104 comprobacione
 En Supabase se comprobó que existe `cerrar_registro_scrap(integer,bigint)` y que el evaluador vigente ya no utiliza `v_trs_registro`. La migración `202610150001_retirar_trs.sql` ya estaba aplicada y se conservó el trabajo del equipo integrado en `e125484`.
 
 La entrega conserva como anexos históricos `EVIDENCIA-DEMO-20261014.md` y `CIERRE-TECNICO-Y-DEMO.md`. Para exponer la versión final usar exclusivamente [GUION-PRESENTACION.md](GUION-PRESENTACION.md).
+
+Validación de publicación: [Vercel 4AiqPzNF2vE51AKJRaYi3pHXWjnE](https://vercel.com/sic-scrap/sic-scrap/4AiqPzNF2vE51AKJRaYi3pHXWjnE), commit `3ecfb7442d70722bb93860f20622d282174cc411`, Ready y Current. En el navegador se comprobó la nota informativa del 86%, panel sin TRS, historial dedicado al scrap y formulario de cierre con piezas OK sin objetivos ni horas programadas. Lint y build finalizaron sin errores. Captura de evidencia: `outputs/panel-final-20261016.png` en la carpeta local de este chat. Esta comprobación no añadió ni alteró registros de planta.
 
 ## Mantenimiento posterior
 

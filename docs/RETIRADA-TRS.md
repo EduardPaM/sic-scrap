@@ -24,4 +24,4 @@ Los anexos CIERRE-TECNICO-Y-DEMO y EVIDENCIA-DEMO-20261014 describen la versión
 
 npm test: 23 pruebas de JavaScript/TypeScript y 104 de PostgreSQL aislado, incluidos 12 controles nuevos posteriores a la migración de retirada. Las pruebas antiguas de TRS verifican la secuencia histórica antes de aplicar la retirada. Ninguna prueba conecta con Supabase de producción.
 
-La aceptación de usuarios y la comprobación en el portal siguen pendientes hasta aplicar la migración y publicar.
+Actualización del 16 de octubre: se verificó la migración en Supabase y la publicación en Vercel. El portal muestra panel e historial sin TRS y el cierre solicita solo piezas OK. El 86% quedó como nota informativa. Ver [cierre vigente](CIERRE-PROYECTO-20261016.md) para evidencia y límites de aceptación.
